@@ -19,7 +19,17 @@ foreach ($ITEMS as $item) {
         $COLUMNS[$col] = true;
     }
 }
-$COLUMNS = array_keys($COLUMNS);
+// La imagen va justo después del id
+$COLUMNS = array_values(array_diff(array_keys($COLUMNS), ['imgs']));
+array_splice($COLUMNS, array_search('id', $COLUMNS, true) + 1, 0, ['imgs']);
+
+$IMPORT = (new HSEY_USE_DATA_CONFIG())->getImport();
+$IMPORT_FIELDS = [];
+foreach ($IMPORT['update_fields'] as $key => $active) {
+    if ($active) {
+        $IMPORT_FIELDS[] = HSEY_API_IMPORT::FIELDS[$key][0];
+    }
+}
 
 ?>
 <form method="post">
@@ -42,6 +52,29 @@ $COLUMNS = array_keys($COLUMNS);
 </form>
 
 <?php if (!empty($ITEMS)) { ?>
+    <div class="hsey-import" id="hsey-import" data-total="<?= count($ITEMS) ?>">
+        <h2>Cargar en WooCommerce</h2>
+        <?php if (!class_exists('WooCommerce')) { ?>
+            <?php FWURespond::render(['status' => 'error', 'message' => 'WooCommerce no está activo.']) ?>
+        <?php } else { ?>
+            <p>
+                Nuevos: se crean con todos los datos como <strong><?= esc_html(HSEY_API_IMPORT::STATUSES[$IMPORT['status']]) ?></strong>.
+                Existentes: se actualiza <strong><?= esc_html($IMPORT_FIELDS ? implode(', ', $IMPORT_FIELDS) : 'nada') ?></strong>.
+                <a href="<?= esc_url(admin_url('admin.php?page=' . HSEY_KEY . '_config#tag-carga')) ?>">Cambiar configuración</a>
+            </p>
+            <div class="content-btn">
+                <button type="button" class="button button-primary hsey-import-start">
+                    Cargar <?= count($ITEMS) ?> productos
+                </button>
+                <button type="button" class="button hsey-import-stop" hidden>
+                    Detener
+                </button>
+            </div>
+            <progress class="hsey-import-progress" max="<?= count($ITEMS) ?>" value="0" hidden></progress>
+            <p class="hsey-import-status"></p>
+            <ul class="hsey-import-errors"></ul>
+        <?php } ?>
+    </div>
     <table class="widefat striped hsey-products">
         <thead>
             <tr>
@@ -76,6 +109,25 @@ $COLUMNS = array_keys($COLUMNS);
     <style>
         .hsey-products {
             margin-top: 1rem;
+        }
+
+        .hsey-import {
+            margin-top: 1rem;
+            padding: 0 1rem 1rem;
+            background: #fff;
+            border: 1px solid #dcdcde;
+            border-radius: 8px;
+        }
+
+        .hsey-import-progress {
+            width: 100%;
+            margin-top: 1rem;
+        }
+
+        .hsey-import-errors {
+            color: #d63638;
+            max-height: 200px;
+            overflow: auto;
         }
 
         .hsey-thumb {

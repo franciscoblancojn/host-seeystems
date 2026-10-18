@@ -11,6 +11,10 @@ $TAGS = [
         'key' => 'config',
         'title' => 'Conexión',
     ],
+    [
+        'key' => 'carga',
+        'title' => 'Carga WooCommerce',
+    ],
 ];
 $defaultTag =  $TAGS[0]['key'];
 

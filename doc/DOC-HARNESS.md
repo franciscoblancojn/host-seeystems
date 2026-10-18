@@ -18,10 +18,10 @@
 2. Sintaxis moderna de PHP prohibida (`?->`, `match`, `readonly`, `fn`, typed properties, named args).
 3. JavaScript ES5 en `.js` y aviso de JS moderno embebido en `src/page`.
 4. Prefijos CSS `hsey-` / `fwue-` en archivos `.css`.
-5. Clases requeridas: `HSEY_CLIENT`, `HSEY_PARSER`, `HSEY_API_PRODUCTS`, `HSEY_USE_DATA_BASE`, `HSEY_USE_DATA_CONFIG`, `HSEY_USE_DATA_PRODUCTS`.
+5. Clases requeridas: `HSEY_CLIENT`, `HSEY_PARSER`, `HSEY_API_PRODUCTS`, `HSEY_API_IMPORT`, `HSEY_USE_DATA_BASE`, `HSEY_USE_DATA_CONFIG`, `HSEY_USE_DATA_PRODUCTS`.
 6. Cada `require_once HSEY_DIR . '...'` de los cargadores `src/**/_.php` apunta a un archivo existente.
 7. `composer validate`.
-8. **Plataforma de solo lectura**: un único POST en `src/` (login en `src/api/client.php`) y ninguna referencia a `cart`, `orders`, `auth/logout`, `auth/cambiarPassword`, `auth/recover`.
+8. **Plataforma de solo lectura**: un único POST en los PHP de `src/` (login en `src/api/client.php`) y ninguna referencia a `cart`, `orders`, `auth/logout`, `auth/cambiarPassword`, `auth/recover`.
 9. **Configuración de IA**: `opencode.json` y `.claude/settings.json` deniegan `git add/commit/merge/push` y el hook de bloqueo es ejecutable.
 10. Toda referencia `DOC-*.md` en `AGENTS.md`, `CONTEXT.md`, `HOOKS.md`, `README.md`, `CHANGELOG.md`, `.rules/` y `.opencode/agents/` existe en `doc/`.
 

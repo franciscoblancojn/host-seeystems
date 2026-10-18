@@ -10,14 +10,17 @@ Plugin de WordPress que se conecta a la plataforma B2B **Swiss Sport B2B** (`htt
 
 - WordPress 5.0+
 - PHP 7.1+ con `openssl` y `dom`
+- WooCommerce (para la carga de productos)
 
 ## Uso
 
 1. Activa el plugin.
 2. **Host Seeystems → Configuracion**: URL de la plataforma, ruta del catálogo (`/catalog`), usuario y contraseña. **Guardar y probar conexión** valida el login.
 3. **Host Seeystems → Productos**: **Traer productos** recorre todo el catálogo (~1.100 productos, ~30 s) y los lista.
-4. Tab **HTML**: muestra lo que devuelve cualquier ruta (GET) con la sesión iniciada.
-5. Logs en **Ajustes → HSEY_LOG**.
+4. **Configuracion → Carga WooCommerce**: qué campos actualizar en productos existentes (por defecto solo stock), precio (PVP o precio cliente) y estado de los nuevos (borrador por defecto).
+5. **Productos → Cargar en WooCommerce**: crea los productos que no existen (por SKU) con todos los datos y actualiza en los existentes solo los campos configurados. Corre por lotes con barra de progreso.
+6. Tab **HTML**: muestra lo que devuelve cualquier ruta (GET) con la sesión iniciada.
+7. Logs en **Ajustes → HSEY_LOG**.
 
 ## Estructura
 
@@ -28,6 +31,8 @@ Plugin de WordPress que se conecta a la plataforma B2B **Swiss Sport B2B** (`htt
 | `src/api/client.php` | `HSEY_CLIENT`: login con `csrf_token` + cookie, sesión reutilizable |
 | `src/api/parser.php` | `HSEY_PARSER`: JSON de cada `.product-card` + paginación |
 | `src/api/products.php` | `HSEY_API_PRODUCTS::sync()`: recorre el catálogo y guarda en `HSEY_PRODUCTS` |
+| `src/api/import.php` | `HSEY_API_IMPORT`: carga en WooCommerce por lotes (AJAX) |
+| `src/js/hsey-import.js` | Progreso de la carga |
 | `src/page/` | Páginas admin construidas con `wordpress_utils` |
 | `libs/` | `franciscoblancojn/wordpress_utils` (Composer, no editar) |
 | `bin/harness.sh` | Validaciones del proyecto |
@@ -51,6 +56,7 @@ Plugin de WordPress que se conecta a la plataforma B2B **Swiss Sport B2B** (`htt
 | `HOOKS.md` | Hooks, formularios y peticiones a la plataforma |
 | `CHANGELOG.md` | Historial de cambios |
 | `doc/DOC-PLATAFORMA.md` | Login, catálogo, campos de producto y regla de solo lectura |
+| `doc/DOC-CARGA-WOOCOMMERCE.md` | Carga en WooCommerce: reglas, configuración y mapeo de campos |
 | `doc/DOC-LIBS.md` | Uso de `wordpress_utils` (UI, updater, logs) |
 | `doc/DOC-HARNESS.md` | Harness y configuración de agentes de IA |
 

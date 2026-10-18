@@ -4,6 +4,13 @@ use franciscoblancojn\wordpress_utils\FWUPage;
 
 echo FWUPage::css();
 
+wp_enqueue_script('hsey-import', HSEY_URL . 'src/js/hsey-import.js', ['jquery'], HSEY_get_version(), true);
+wp_localize_script('hsey-import', 'HSEY_IMPORT', [
+    'ajaxUrl' => admin_url('admin-ajax.php'),
+    'nonce' => wp_create_nonce('hsey_nonce'),
+    'batch' => 5,
+]);
+
 $HSEY_USE_DATA_CONFIG = new HSEY_USE_DATA_CONFIG();
 
 $TAGS = [

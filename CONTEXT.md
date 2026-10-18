@@ -12,6 +12,7 @@ Conecta WordPress con la plataforma B2B **Swiss Sport B2B** (`https://host.seeys
 - Inicia sesión (formulario con `csrf_token` + cookie de sesión `ssb2b`) y reutiliza la sesión.
 - Recorre el catálogo paginado (`/catalog?page=N`) y guarda todos los productos (~1.100, 23 páginas).
 - Lista los productos en el admin y permite inspeccionar el HTML autenticado de cualquier ruta.
+- Carga los productos en WooCommerce por lotes: crea los que no existen con todos los datos y en los existentes actualiza solo los campos configurados (por defecto solo stock).
 - Auto-update vía GitHub (`FWUUpdate`) y logs (`FWUSystemLog`).
 
 ---
@@ -51,12 +52,16 @@ src/
     client.php                → HSEY_CLIENT: login + GET autenticado con sesión
     parser.php                → HSEY_PARSER: JSON de .product-card + paginación
     products.php              → HSEY_API_PRODUCTS: sincroniza el catálogo completo
+    import.php                → HSEY_API_IMPORT: carga en WooCommerce (AJAX por lotes)
+  js/
+    hsey-import.js            → Progreso de la carga (ES5 + jQuery)
   page/
     add.php                   → Menú principal (redirige a Configuracion)
-    pages/config/             → Submenú "Configuracion" (tab Conexión)
+    pages/config/             → Submenú "Configuracion" (tabs Conexión, Carga WooCommerce)
     pages/productos/          → Submenú "Productos" (tabs Productos, HTML)
     sections/config.php       → Form URL / ruta catálogo / usuario / contraseña + probar conexión
-    sections/productos.php    → Botón "Traer productos" + tabla
+    sections/carga.php        → Campos a actualizar, fuente de precio y estado al crear
+    sections/productos.php    → "Traer productos", "Cargar en WooCommerce" + tabla (imagen después de id)
     sections/html.php         → Inspector de HTML autenticado (GET)
 doc/                          → Guías DOC-*.md
 .rules/                       → Skills (hsey-plugin, php-wordpress)
@@ -72,7 +77,8 @@ doc/                          → Guías DOC-*.md
 - `get()`, `set($data)`, `setField($key, $value)`, `add($data)` (merge). Persisten en `get_option($KEY)`.
 
 ### HSEY_USE_DATA_CONFIG (`src/data/config.php`)
-- Campos: `base_url`, `catalog_path`, `email`, `password` (cifrada).
+- Campos: `base_url`, `catalog_path`, `email`, `password` (cifrada), `import` (configuración de carga).
+- `getImport()` → `update_fields` (stock activo, el resto inactivo por defecto), `price_source` (`pvp`), `status` (`draft`).
 - `getBaseUrl()` (default `HSEY_BASE_URL_DEFAULT`, sin `/` final), `getEmail()`, `getPassword()`, `hasPassword()`, `setPassword($plain)`.
 - Cifrado AES-256-CBC con clave `sha256(AUTH_KEY . SECURE_AUTH_SALT . HSEY_KEY)` e IV aleatorio. Si cambian las salts de `wp-config.php`, la contraseña hay que volver a guardarla.
 
@@ -94,6 +100,13 @@ doc/                          → Guías DOC-*.md
 ### HSEY_API_PRODUCTS (`src/api/products.php`)
 - `sync()` → recorre desde `catalog_path` (default `/catalog`) siguiendo `nextPage()` hasta `MAX_PAGES` (50), guarda en `HSEY_PRODUCTS` y registra `sync_products` en el log. Sube `set_time_limit(300)` (~30 s para 23 páginas).
 
+### HSEY_API_IMPORT (`src/api/import.php`)
+- `init()` registra `wp_ajax_hsey_import_batch`.
+- `batch($offset, $limit)` → `{ total, next, created, updated, errors[] }` sobre `HSEY_PRODUCTS`.
+- `importProduct($item)` → busca por SKU (`ref`) o meta `_hsey_id`; crea con todos los campos o actualiza solo los activos.
+- Constantes: `FIELDS`, `PRICE_SOURCES`, `STATUSES`, `ATTRIBUTES`, `BATCH_MAX`, `META_ID` (`_hsey_id`), `META_IMG_SRC` (`_hsey_img_src`).
+- Detalle: `doc/DOC-CARGA-WOOCOMMERCE.md`.
+
 ---
 
 ## Producto (campos de la plataforma)
@@ -108,11 +121,13 @@ doc/                          → Guías DOC-*.md
 
 | Clave | Tipo | Contenido |
 |---|---|---|
-| `HSEY_CONFIG` | option | `base_url`, `catalog_path`, `email`, `password` (cifrada) |
+| `HSEY_CONFIG` | option | `base_url`, `catalog_path`, `email`, `password` (cifrada), `import` |
 | `HSEY_PRODUCTS` | option | `date`, `items` |
 | `HSEY_SESSION` | transient | Cookies de sesión (`ssb2b`) |
 | `HSEY_LOG_KEY` | option | Logs de `FWUSystemLog` (JSON, máx. 100, gestionado por la librería) |
 | `github_updater_*` | transient | Cache de la release de GitHub (`FWUUpdate`) |
+| `_hsey_id` | post meta (product) | `id` del producto en la plataforma |
+| `_hsey_img_src` | post meta (attachment) | URL de origen de la imagen (evita duplicados) |
 
 ---
 
@@ -121,7 +136,7 @@ doc/                          → Guías DOC-*.md
 | Slug | Menú | Tabs |
 |---|---|---|
 | `HSEY` | Host Seeystems | Redirige a `HSEY_config` |
-| `HSEY_config` | Configuracion | `config` (Conexión) |
+| `HSEY_config` | Configuracion | `config` (Conexión), `carga` (Carga WooCommerce) |
 | `HSEY_productos` | Productos | `productos`, `html` |
 | `HSEY_LOG` | Ajustes → logs | Generada por `FWUSystemLog::init()` |
 
@@ -135,11 +150,19 @@ doc/                          → Guías DOC-*.md
 4. `HSEY_PARSER::parse()` por página + `nextPage()` hasta la última.
 5. Guarda `HSEY_PRODUCTS` y muestra la tabla.
 
+## Flujo: Cargar en WooCommerce
+
+1. Admin → Productos → **Cargar N productos**.
+2. `hsey-import.js` llama `wp_ajax_hsey_import_batch` en lotes de 5.
+3. `HSEY_API_IMPORT::importProduct()` por producto: crear (todo) o actualizar (campos activos).
+4. Imágenes por GET con `download_url()`, reutilizando adjuntos por `_hsey_img_src`.
+
 ---
 
 ## Dependencias
 
 - WordPress 5.0+, PHP 7.1+ (por `libs/`), extensiones `openssl` y `dom`.
+- WooCommerce (solo para la carga; `product_brand` para la marca).
 - `franciscoblancojn/wordpress_utils` ^1 (en `libs/`). Ver `doc/DOC-LIBS.md`.
 
 ---
@@ -158,5 +181,6 @@ doc/                          → Guías DOC-*.md
 - `AGENTS.md` — reglas obligatorias.
 - `HOOKS.md` — hooks y endpoints.
 - `doc/DOC-PLATAFORMA.md` — plataforma, login, catálogo, regla de solo lectura.
+- `doc/DOC-CARGA-WOOCOMMERCE.md` — carga en WooCommerce.
 - `doc/DOC-LIBS.md` — uso de `wordpress_utils`.
 - `doc/DOC-HARNESS.md` — validaciones y configuración de IA.

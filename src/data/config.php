@@ -20,6 +20,26 @@ class HSEY_USE_DATA_CONFIG extends HSEY_USE_DATA_BASE
         return self::decrypt($this->DATA['password'] ?? '');
     }
 
+    /**
+     * Configuración de carga a WooCommerce con valores por defecto.
+     * update_fields: campos que se actualizan si el producto ya existe (solo stock activo por defecto).
+     */
+    public function getImport()
+    {
+        $import = $this->DATA['import'] ?? [];
+        $update_fields = [];
+        foreach (HSEY_API_IMPORT::FIELDS as $key => $field) {
+            $update_fields[$key] = isset($import['update_fields'][$key]) ? (bool) $import['update_fields'][$key] : $field[1];
+        }
+        $price_source = $import['price_source'] ?? '';
+        $status = $import['status'] ?? '';
+        return [
+            'update_fields' => $update_fields,
+            'price_source' => isset(HSEY_API_IMPORT::PRICE_SOURCES[$price_source]) ? $price_source : 'pvp',
+            'status' => isset(HSEY_API_IMPORT::STATUSES[$status]) ? $status : 'draft',
+        ];
+    }
+
     public function hasPassword()
     {
         return !empty($this->DATA['password']);

@@ -43,18 +43,26 @@ Detalle de la plataforma: `doc/DOC-PLATAFORMA.md`.
 - Guarda `['date', 'items']` en `HSEY_USE_DATA_PRODUCTS`.
 - ~23 páginas / ~30 s: no bajar `set_time_limit(300)`. Para crecer, mover a WP-Cron o procesar por lotes.
 
-## 5. Capa de datos
+## 5. Carga en WooCommerce (`HSEY_API_IMPORT`)
+
+- No existe (SKU = `ref`, o meta `_hsey_id`) → crear con **todos** los campos. Existe → actualizar **solo** los activos en `getImport()['update_fields']` (default: solo `stock`).
+- Nuevo campo: agregarlo a `FIELDS` (`key => [label, default]`) y aplicarlo en `apply()`; documentar en `doc/DOC-CARGA-WOOCOMMERCE.md`.
+- Nunca cambiar el estado de productos existentes; `status` aplica solo al crear.
+- Imágenes: reutilizar adjuntos por `_hsey_img_src`; no duplicar.
+- Por lotes vía `wp_ajax_hsey_import_batch` (nonce `hsey_nonce`, `manage_options`); no procesar todo en una sola petición.
+
+## 6. Capa de datos
 
 | Clase | Opción | Campos |
 |---|---|---|
-| `HSEY_USE_DATA_CONFIG` | `HSEY_CONFIG` | `base_url`, `catalog_path`, `email`, `password` (cifrada) |
+| `HSEY_USE_DATA_CONFIG` | `HSEY_CONFIG` | `base_url`, `catalog_path`, `email`, `password` (cifrada), `import` |
 | `HSEY_USE_DATA_PRODUCTS` | `HSEY_PRODUCTS` | `date`, `items` |
 
 - Contraseña: solo vía `setPassword()` / `getPassword()`. Nunca imprimirla (el input muestra "(guardada)") ni loguearla.
 - Campo de contraseña vacío al guardar = conservar la actual.
 - Nueva opción → nueva subclase de `HSEY_USE_DATA_BASE` con su constante en `index.php`.
 
-## 6. Páginas admin con `wordpress_utils`
+## 7. Páginas admin con `wordpress_utils`
 
 - Submenú: `src/page/pages/{subpagina}/add.php` + `page.php`; tabs en `src/page/sections/{tab}.php`; require en `src/page/pages/_.php`.
 - `page.php`: `FWUPage::css()`, `FWUPage::tabs($TAGS, $defaultTag)`, `FWUPage::js(HSEY_KEY)`.
@@ -64,7 +72,7 @@ Detalle de la plataforma: `doc/DOC-PLATAFORMA.md`.
 
 Ver `doc/DOC-LIBS.md`.
 
-## 7. Checklist antes de terminar
+## 8. Checklist antes de terminar
 
 1. `npm run check` sin FAILURES.
 2. `CHANGELOG.md` actualizado; `CONTEXT.md` / `HOOKS.md` / `doc/` si cambió la arquitectura.

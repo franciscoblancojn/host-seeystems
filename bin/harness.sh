@@ -318,6 +318,7 @@ run_required_classes() {
         'HSEY_CLIENT'
         'HSEY_PARSER'
         'HSEY_API_PRODUCTS'
+        'HSEY_API_IMPORT'
         'HSEY_USE_DATA_BASE'
         'HSEY_USE_DATA_CONFIG'
         'HSEY_USE_DATA_PRODUCTS'
@@ -380,7 +381,7 @@ run_readonly_platform() {
 
     # El único POST permitido es el login en HSEY_CLIENT::login()
     local posts count
-    posts="$(grep -rnE "'POST'|\"POST\"|wp_remote_post|CURLOPT_POST" "$PLUGIN_DIR/src" 2>/dev/null)"
+    posts="$(grep -rnE --include='*.php' "'POST'|\"POST\"|wp_remote_post|CURLOPT_POST" "$PLUGIN_DIR/src" 2>/dev/null)"
     count="$(printf '%s' "$posts" | grep -c .)"
     if [ "$count" -eq 1 ] && printf '%s' "$posts" | grep -q 'src/api/client.php'; then
         ok 'único POST: login en src/api/client.php'

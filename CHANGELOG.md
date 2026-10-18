@@ -7,7 +7,19 @@
 
 ## [1.0.0] — 2026-10-17 (sin publicar)
 
-### Harness y documentación (pendiente de commit)
+### Carga en WooCommerce (pendiente de commit)
+
+- Nueva opción **Cargar en WooCommerce** en Productos: si el producto no existe (SKU = `ref`, o meta `_hsey_id`) se crea con todos los datos (nombre, SKU, precio, stock, descripción, atributos, marca, imágenes); si existe se actualizan solo los campos configurados
+- Nueva pestaña **Configuracion → Carga WooCommerce**: campos a actualizar (todos desactivados por defecto excepto **Cantidad**), precio regular (PVP o precio cliente) y estado al crear (borrador por defecto)
+- Carga por lotes vía AJAX `hsey_import_batch` (nonce `hsey_nonce`, `manage_options`) con barra de progreso, contador de creados/actualizados/errores y botón Detener (`src/js/hsey-import.js`)
+- Imágenes descargadas por GET y reutilizadas por URL de origen (`_hsey_img_src`): no se duplican al recargar
+- Marca en la taxonomía `product_brand` de WooCommerce
+- Tabla de productos: la imagen se muestra después del `id`
+- Logs `save_import_config`, `import_errors`, `import_done`
+- Harness: clase requerida `HSEY_API_IMPORT`; la regla de un único POST revisa solo PHP (el AJAX a WordPress no es la plataforma)
+- Documentación: `doc/DOC-CARGA-WOOCOMMERCE.md`; `CONTEXT.md`, `HOOKS.md`, `README.md` y skill `hsey-plugin` actualizados
+
+### `886b316` harness
 
 - Harness de validación `bin/harness.sh` con `npm run check` y `npm run doc`: php -l, sintaxis PHP moderna, JS ES5, prefijos CSS, clases requeridas, cargadores, composer, **regla de solo lectura de la plataforma** y **configuración de IA**
 - Fix (heredado del harness de Generate Page AI): los `fail` dentro de `printf | while` no sumaban FAILURES; falso positivo de `readonly` con el atributo HTML; `printf` con formato iniciado en `-`

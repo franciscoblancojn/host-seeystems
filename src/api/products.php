@@ -13,7 +13,12 @@ class HSEY_API_PRODUCTS
     {
         $CONFIG = new HSEY_USE_DATA_CONFIG();
         $client = new HSEY_CLIENT();
-        $path = $CONFIG->get()['catalog_path'] ?? '/catalog';
+        $path = ($CONFIG->get()['catalog_path'] ?? '') ?: '/catalog';
+
+        // El catálogo tiene decenas de páginas
+        if (function_exists('set_time_limit')) {
+            set_time_limit(300);
+        }
 
         $products = [];
         $visited = [];
@@ -27,8 +32,8 @@ class HSEY_API_PRODUCTS
                 $path = $res['location'];
                 continue;
             }
-            $products = array_merge($products, HSEY_PARSER::parse($res, $CONFIG->getBaseUrl()));
-            $path = HSEY_PARSER::nextPage($res['body'], $client->url($path));
+            $products = array_merge($products, HSEY_PARSER::parse($res['body']));
+            $path = HSEY_PARSER::nextPage($res['body']);
         }
 
         (new HSEY_USE_DATA_PRODUCTS())->set([
@@ -41,7 +46,7 @@ class HSEY_API_PRODUCTS
         ]);
 
         if (empty($products)) {
-            return ['status' => 'error', 'message' => 'Se cargó el catálogo pero no se detectaron productos. Revisa la pestaña "HTML" para ajustar el parser.'];
+            return ['status' => 'error', 'message' => 'Se cargó el catálogo pero no se detectaron productos. Revisa la pestaña "HTML" para ver qué devuelve la plataforma.'];
         }
         return ['status' => 'ok', 'message' => count($products) . ' productos traídos.'];
     }

@@ -1,50 +1,19 @@
 <?php
 
 /**
- * Convierte la respuesta del catálogo (JSON o HTML) en una lista de productos normalizada.
- * El HTML del catálogo se lee con heurísticas genéricas; ajustar los selectores
- * de SELECTORS cuando se conozca el marcado real de la plataforma.
+ * Convierte el HTML del catálogo en una lista de productos.
+ * Cada tarjeta `.product-card` trae el producto completo como JSON en
+ * onclick="openProductModal({...})" (id, ref, nombre, marca, precio, pvp, stock, imgs, ...).
  */
 class HSEY_PARSER
 {
-    const SELECTORS = [
-        'card' => "//*[contains(concat(' ', normalize-space(@class), ' '), ' product-card ') or contains(concat(' ', normalize-space(@class), ' '), ' product ') or @data-product-id or @data-sku]",
-        'name' => ".//*[contains(@class, 'name') or contains(@class, 'title')] | .//h2 | .//h3 | .//h4",
-        'sku' => ".//*[contains(@class, 'sku') or contains(@class, 'ref') or contains(@class, 'code')]",
-        'price' => ".//*[contains(@class, 'price') or contains(@class, 'precio')]",
-        'stock' => ".//*[contains(@class, 'stock') or contains(@class, 'existencia')]",
-        'image' => ".//img",
-        'link' => ".//a[@href]",
-    ];
+    const CARD = "//*[contains(concat(' ', normalize-space(@class), ' '), ' product-card ')]";
 
-    public static function parse($res, $baseUrl)
+    public static function parse($html)
     {
-        $body = trim($res['body'] ?? '');
-        if ($body === '') {
+        if (trim($html) === '') {
             return [];
         }
-        if (strpos($res['content_type'] ?? '', 'json') !== false || $body[0] === '[' || $body[0] === '{') {
-            return self::parseJson($body);
-        }
-        return self::parseHtml($body, $baseUrl);
-    }
-
-    public static function parseJson($body)
-    {
-        $data = json_decode($body, true);
-        if (!is_array($data)) {
-            return [];
-        }
-        foreach (['data', 'products', 'productos', 'items', 'results'] as $key) {
-            if (isset($data[$key]) && is_array($data[$key])) {
-                return array_values($data[$key]);
-            }
-        }
-        return array_values($data);
-    }
-
-    public static function parseHtml($html, $baseUrl)
-    {
         $dom = new DOMDocument();
         libxml_use_internal_errors(true);
         $dom->loadHTML('<?xml encoding="UTF-8">' . $html);
@@ -52,22 +21,9 @@ class HSEY_PARSER
         $xpath = new DOMXPath($dom);
 
         $products = [];
-        $cards = $xpath->query(self::SELECTORS['card']);
-        foreach ($cards as $card) {
-            // Evitar tarjetas anidadas dentro de otra tarjeta ya detectada
-            if (self::hasCardAncestor($card, $cards)) {
-                continue;
-            }
-            $product = [
-                'id' => $card->getAttribute('data-product-id') ?: $card->getAttribute('data-id'),
-                'sku' => $card->getAttribute('data-sku') ?: self::text($xpath, self::SELECTORS['sku'], $card),
-                'name' => $card->getAttribute('data-name') ?: self::text($xpath, self::SELECTORS['name'], $card),
-                'price' => $card->getAttribute('data-price') ?: self::text($xpath, self::SELECTORS['price'], $card),
-                'stock' => $card->getAttribute('data-stock') ?: self::text($xpath, self::SELECTORS['stock'], $card),
-                'image' => self::absUrl(self::attr($xpath, self::SELECTORS['image'], $card, ['data-src', 'src']), $baseUrl),
-                'url' => self::absUrl(self::attr($xpath, self::SELECTORS['link'], $card, ['href']), $baseUrl),
-            ];
-            if ($product['name'] === '' && $product['sku'] === '') {
+        foreach ($xpath->query(self::CARD) as $card) {
+            $product = self::parseCardJson($card->getAttribute('onclick'));
+            if ($product === null) {
                 continue;
             }
             $products[] = $product;
@@ -75,63 +31,25 @@ class HSEY_PARSER
         return $products;
     }
 
+    private static function parseCardJson($onclick)
+    {
+        $start = strpos($onclick, '{');
+        $end = strrpos($onclick, '}');
+        if ($start === false || $end === false) {
+            return null;
+        }
+        $product = json_decode(substr($onclick, $start, $end - $start + 1), true);
+        return is_array($product) && isset($product['id']) ? $product : null;
+    }
+
     /**
-     * URL de la siguiente página del catálogo, si existe.
+     * URL de la siguiente página del catálogo (enlace "Siguiente" de .pagination), si existe.
      */
-    public static function nextPage($html, $baseUrl)
+    public static function nextPage($html)
     {
-        if (!preg_match('/<a[^>]+(?:rel="next"|class="[^"]*next[^"]*")[^>]*href="([^"]+)"/i', $html, $m)
-            && !preg_match('/<a[^>]+href="([^"]+)"[^>]*(?:rel="next"|class="[^"]*next[^"]*")/i', $html, $m)) {
+        if (!preg_match('/<a[^>]+class="page-link"[^>]+href="([^"]+)"[^>]*>\s*Siguiente/i', $html, $m)) {
             return '';
         }
-        return self::absUrl(html_entity_decode($m[1]), $baseUrl);
-    }
-
-    private static function hasCardAncestor($node, $cards)
-    {
-        for ($parent = $node->parentNode; $parent; $parent = $parent->parentNode) {
-            foreach ($cards as $card) {
-                if ($card->isSameNode($parent)) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
-    private static function text($xpath, $query, $context)
-    {
-        $node = $xpath->query($query, $context)->item(0);
-        return $node ? trim(preg_replace('/\s+/', ' ', $node->textContent)) : '';
-    }
-
-    private static function attr($xpath, $query, $context, $attrs)
-    {
-        $node = $xpath->query($query, $context)->item(0);
-        if (!$node) {
-            return '';
-        }
-        foreach ($attrs as $attr) {
-            if ($node->getAttribute($attr) !== '') {
-                return $node->getAttribute($attr);
-            }
-        }
-        return '';
-    }
-
-    private static function absUrl($url, $baseUrl)
-    {
-        if ($url === '' || preg_match('#^(https?:)?//#', $url)) {
-            return $url;
-        }
-        if ($url[0] === '?') {
-            return strtok($baseUrl, '?') . $url;
-        }
-        $parts = wp_parse_url($baseUrl);
-        $origin = $parts['scheme'] . '://' . $parts['host'];
-        if ($url[0] === '/') {
-            return $origin . $url;
-        }
-        return trailingslashit($baseUrl) . $url;
+        return strtok(html_entity_decode($m[1]), '#');
     }
 }

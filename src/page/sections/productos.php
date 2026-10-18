@@ -55,15 +55,15 @@ $COLUMNS = array_keys($COLUMNS);
                 <tr>
                     <?php foreach ($COLUMNS as $col) {
                         $value = $item[$col] ?? '';
-                        if (is_array($value) || is_object($value)) {
+                        if ($col === 'imgs') {
+                            $value = $value[0] ?? '';
+                        } elseif (is_array($value) || is_object($value)) {
                             $value = wp_json_encode($value);
                         }
                     ?>
                         <td>
-                            <?php if ($col === 'image' && $value) { ?>
+                            <?php if ($col === 'imgs' && $value) { ?>
                                 <img src="<?= esc_url($value) ?>" alt="" class="hsey-thumb" loading="lazy" />
-                            <?php } elseif ($col === 'url' && $value) { ?>
-                                <a href="<?= esc_url($value) ?>" target="_blank" rel="noopener noreferrer">Ver</a>
                             <?php } else { ?>
                                 <?= esc_html($value) ?>
                             <?php } ?>

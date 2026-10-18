@@ -10,6 +10,8 @@
     "sync:version": "npm run sync:package && npm run sync:readme",
     "push-v": "bash scripts/bump-version.sh",
     "push-tag": "npm run sync:version && VERSION=$(npm run -s v) && git add . && git commit -m \"Release $VERSION\" && git tag $VERSION && git push origin master && git push origin $VERSION",
+    "check": "bash bin/harness.sh",
+    "doc": "bash bin/harness.sh doc",
     "rm-composer": "echo 'off' || true || rm -r vendor/composer || true",
     "rm-autoload": "echo 'off' || true || rm vendor/autoload.php || true",
     "rm-gitignore": "find vendor -type f -name \".gitignore\" -delete || true",

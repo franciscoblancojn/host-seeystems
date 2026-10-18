@@ -1,0 +1,68 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "username": "developer",
+  "instructions": ["AGENTS.md", "CONTEXT.md"],
+  "agent": {
+    "hsey-dev": {
+      "description": "WordPress plugin developer especializado en Host Seeystems. Usa este agente cuando trabajes en funcionalidades del plugin HSEY.",
+      "mode": "subagent",
+      "permission": {
+        "edit": "allow",
+        "bash": {
+          "git add *": "deny",
+          "git add": "deny",
+          "git commit *": "deny",
+          "git commit": "deny",
+          "git merge *": "deny",
+          "git merge": "deny",
+          "git push *": "deny",
+          "git push": "deny",
+          "git diff *": "allow",
+          "git log *": "allow",
+          "git status": "allow",
+          "npm *": "allow",
+          "*": "ask"
+        }
+      }
+    },
+    "hsey-reviewer": {
+      "description": "Revisor de código que valida que los cambios cumplan las reglas del plugin HSEY y WordPress Coding Standards.",
+      "mode": "subagent",
+      "permission": {
+        "edit": "deny",
+        "bash": {
+          "git diff *": "allow",
+          "git log *": "allow",
+          "git status": "allow",
+          "bash bin/harness.sh*": "allow",
+          "npm run check": "allow",
+          "*": "deny"
+        }
+      }
+    }
+  },
+  "skills": {
+    "paths": [".rules"]
+  },
+  "permission": {
+    "edit": "allow",
+    "bash": {
+      "git add *": "deny",
+      "git add": "deny",
+      "git commit *": "deny",
+      "git commit": "deny",
+      "git merge *": "deny",
+      "git merge": "deny",
+      "git push *": "deny",
+      "git push": "deny",
+      "git diff *": "allow",
+      "git log *": "allow",
+      "git status": "allow",
+      "git *": "allow",
+      "npm *": "allow",
+      "composer *": "allow",
+      "wp *": "ask",
+      "*": "ask"
+    }
+  }
+}

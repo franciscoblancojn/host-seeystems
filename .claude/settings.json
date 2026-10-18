@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(git status)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(npm run check)",
+      "Bash(npm run v)",
+      "Bash(bash bin/harness.sh:*)",
+      "Bash(php -l:*)"
+    ],
+    "deny": [
+      "Bash(git add)",
+      "Bash(git add:*)",
+      "Bash(git commit)",
+      "Bash(git commit:*)",
+      "Bash(git merge)",
+      "Bash(git merge:*)",
+      "Bash(git push)",
+      "Bash(git push:*)",
+      "Bash(npm run push-v:*)",
+      "Bash(npm run push-tag:*)",
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Edit(./libs/**)",
+      "Write(./libs/**)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/block-git-write.sh\""
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/php-lint.sh\""
+          }
+        ]
+      }
+    ]
+  }
+}

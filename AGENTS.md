@@ -9,7 +9,7 @@
 ## Seguridad
 - Guardar ajustes: `check_admin_referer(HSY_API_SETTINGS::ACTION)` + `current_user_can(HSY_CAPABILITY)`.
 - `FWUUpdate` lee el token de `index.php` (`token_array_split`). Es el mismo token de los demás plugins del autor (solo lee repos públicos) y va troceado a propósito. No agregar otras claves o secretos al código: `npm run check` falla si encuentra un token escrito de corrido.
-- Las credenciales del catálogo de origen se guardan solo en `HSY_CONFIG` (wp_options, sin autoload). La contraseña **nunca** se imprime en el HTML ni se escribe en el log; el campo vacío conserva la guardada.
+- Las credenciales del catálogo y la API key de Serper se guardan solo en `HSY_CONFIG` (wp_options, sin autoload). Los secretos (`HSY_USE_DATA_CONFIG::SECRETS`) **nunca** se imprimen en el HTML ni se escriben en el log; el campo vacío conserva el guardado.
 - AJAX (`HSY_API_IMPORT`): `guard()` con `check_ajax_referer(HSY_API_IMPORT::NONCE)` + `current_user_can(HSY_CAPABILITY)`.
 
 ## Arquitectura
@@ -26,6 +26,10 @@
   - `HSY_USE_DATA_CATALOG` (opción `HSY_CATALOG`, sin autoload) es la **única** fuente de lo que se puede importar: la tabla y los lotes leen de ahí, no del origen.
   - `HSY_IMPORTER` es la **única** que escribe productos. Un producto importado se reconoce por la meta `_hsy_source_id` (y si no, por el SKU). Las imágenes se reutilizan por `_hsy_source_url`.
   - Importación por lotes de `HSY_BATCH_SIZE` desde el JS (sin peticiones largas ni cron).
+  - Mapeo fijo: marca → `product_brand` (se reutiliza sin distinguir mayúsculas; si no existe se crea con `HSY_PARSER::brand_name()`, «ARMANI EXCHANGE» → «Armani Exchange»); referencia → SKU; características → atributos + descripción corta; **PVP sugerido → precio normal** (el rebajado no se toca); **precio mayorista → `HSY_WHOLESALE_META`**, que se actualiza siempre (aunque «actualizar existentes» esté apagado) y se muestra en el editor (`HSY_HOOK_EDITOR`).
+  - Todo producto importado lleva `HSY_IMPORTED_META = 'yes'`: es lo que identifica a los productos del plugin (stock mínimo, editor).
+  - `HSY_STOCK` es la **única** fuente de la regla del stock mínimo: con `min_stock` unidades o menos → 0. Se aplica al importar y en `woocommerce_product_set_stock` (`HSY_HOOK_STOCK`), solo a productos importados.
+  - `HSY_DESCRIBER` busca la descripción en Google vía Serper.dev (la Custom Search JSON API de Google no admite clientes nuevos y se apaga el 2027-01-01). Solo acepta páginas o snippets que contengan **la referencia exacta** y nunca reemplaza una descripción existente. No sortear bloqueos (403/captcha) de las páginas de terceros.
 - Plugin genérico: **no** usar nombres ni textos de un sitio concreto (el contenido por defecto es solo un ejemplo editable).
 - Rendimiento: CSS/JS del admin solo en la página del plugin; en el sitio, solo donde se usa.
 - Toda operación relevante queda en el log: `HSY_LOG_SERVICE::add('tipo', [...])`.

@@ -30,6 +30,7 @@ add_action('admin_enqueue_scripts', function ($hook) {
         'ajax' => admin_url('admin-ajax.php'),
         'nonce' => wp_create_nonce(HSY_API_IMPORT::NONCE),
         'batch' => HSY_BATCH_SIZE,
+        'min_stock' => HSY_STOCK::min(),
         'currency' => html_entity_decode(get_woocommerce_currency_symbol(), ENT_QUOTES, 'UTF-8'),
         'decimals' => wc_get_price_decimals(),
         'thousand' => wc_get_price_thousand_separator(),

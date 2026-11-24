@@ -1,3 +1,5 @@
 <?php
 
-// Un archivo por integración (front.php, cart.php, email.php…), cada uno con su clase HSY_HOOK_*.
+// Un archivo por integración, cada uno con su clase HSY_HOOK_*.
+require_once HSY_DIR . 'src/hooks/stock.php';
+require_once HSY_DIR . 'src/hooks/editor.php';

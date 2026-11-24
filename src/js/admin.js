@@ -83,6 +83,18 @@ jQuery(function ($) {
         return '<span class="hsy-muted">Sin importar</span>';
     }
 
+    // Stock del catálogo y lo que quedará en la tienda con la regla del stock mínimo.
+    function hsy_stock(stock) {
+        if (stock === null || typeof stock === 'undefined') {
+            return '—';
+        }
+        var min = parseInt(D.min_stock, 10) || 0;
+        if (min > 0 && stock > 0 && stock <= min) {
+            return hsy_text(stock) + ' <span class="hsy-warning" title="Stock mínimo: ' + min + '">→ 0</span>';
+        }
+        return hsy_text(stock);
+    }
+
     function hsy_row_html(row) {
         return '<tr data-id="' + hsy_text(row.id) + '">' +
             '<th scope="row" class="check-column"><input type="checkbox" class="hsy-check" value="' + hsy_text(row.id) + '"></th>' +
@@ -92,8 +104,8 @@ jQuery(function ($) {
             '</div></td>' +
             '<td>' + hsy_text(row.sku) + '</td>' +
             '<td>' + hsy_price(row.pvp) + '</td>' +
-            '<td>' + hsy_price(row.cost) + '</td>' +
-            '<td>' + (row.stock === null ? '—' : hsy_text(row.stock)) +
+            '<td>' + hsy_price(row.wholesale) + '</td>' +
+            '<td>' + hsy_stock(row.stock) +
             (row.availability ? '<br><span class="hsy-muted">' + hsy_text(row.availability) + '</span>' : '') + '</td>' +
             '<td class="hsy-col-status">' + hsy_status(row) + '</td>' +
             '<td class="hsy-col-action"><button type="button" class="button button-small hsy-import-one">' +

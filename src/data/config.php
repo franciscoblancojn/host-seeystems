@@ -20,31 +20,30 @@ class HSY_USE_DATA_CONFIG extends HSY_USE_DATA_BASE
         // Importación.
         'status' => 'draft',       // estado de los productos nuevos: draft | pending | publish
         'update_existing' => 1,    // volver a importar actualiza el producto ya creado
-        'update_fields' => ['name', 'price', 'stock'], // qué se actualiza en los existentes
+        'update_fields' => ['price', 'stock'], // qué se actualiza en los existentes (el precio mayorista, siempre)
         'import_images' => 1,
-        'import_categories' => 1,
-        'category_parent' => '',   // categoría padre de las categorías por marca ('' = de primer nivel)
+        'category' => '',          // categoría para los productos nuevos ('' = ninguna)
         'name_template' => '{nombre}', // {nombre} {marca} {ref}
-        'price_source' => 'pvp',   // pvp = precio de venta al público | cost = precio del cliente
-        'price_factor' => 1,       // multiplicador del precio elegido (1 = igual; 1.3 = +30 %)
-    ];
-
-    const PRICE_SOURCES = [
-        'pvp' => 'PVP del catálogo',
-        'cost' => 'Precio del cliente (costo)',
+        // Stock mínimo: con min_stock unidades o menos el producto importado queda con stock 0.
+        'min_stock' => 3,
+        // Descripción desde Google (vía Serper.dev) cuando el producto no tiene.
+        'describe' => 0,
+        'serper_key' => '',
     ];
 
     const STATUSES = ['draft' => 'Borrador', 'pending' => 'Pendiente de revisión', 'publish' => 'Publicado'];
 
     const UPDATE_FIELDS = [
         'name' => 'Nombre',
-        'description' => 'Descripción',
-        'price' => 'Precio',
+        'price' => 'Precio (PVP)',
         'stock' => 'Inventario',
-        'attributes' => 'Atributos y marca',
+        'attributes' => 'Características y marca',
         'images' => 'Imágenes',
-        'categories' => 'Categorías',
+        'description' => 'Descripción (solo si está vacía)',
     ];
+
+    /** Ajustes secretos: nunca se imprimen; vacío en el formulario = conservar. */
+    const SECRETS = ['password', 'serper_key'];
 
     public function get()
     {
@@ -67,48 +66,52 @@ class HSY_USE_DATA_CONFIG extends HSY_USE_DATA_BASE
 
     /**
      * Normaliza lo que llega del formulario de ajustes (ya con wp_unslash).
-     * La contraseña vacía conserva la guardada (el formulario nunca la muestra).
+     * Los formularios van por pestañas: lo que no llega conserva su valor guardado.
      */
     public static function sanitize($input)
     {
         $input = (array) $input;
         $current = (new self())->get();
+        $out = $current;
+        $has = function ($key) use ($input) {
+            return array_key_exists($key, $input);
+        };
 
-        $base_url = esc_url_raw(trim($input['base_url'] ?? ''), ['https', 'http']);
-        if ('' !== $base_url) {
-            $base_url = trailingslashit($base_url);
+        // Pestaña Conexión.
+        if ($has('base_url')) {
+            $base_url = esc_url_raw(trim($input['base_url']), ['https', 'http']);
+            $out['base_url'] = '' !== $base_url ? trailingslashit($base_url) : '';
+            $out['login_path'] = self::path($input['login_path'] ?? '', self::DEFAULTS['login_path']);
+            $out['catalog_path'] = self::path($input['catalog_path'] ?? '', self::DEFAULTS['catalog_path']);
+            $out['email'] = sanitize_email($input['email'] ?? '');
         }
 
-        $password = (string) ($input['password'] ?? '');
-        if ('' === $password) {
-            $password = $current['password'];
-        }
-        if (!empty($input['password_clear'])) {
-            $password = '';
+        // Pestaña Importación (marcada con el campo oculto import_tab).
+        if (!empty($input['import_tab'])) {
+            $status = sanitize_key($input['status'] ?? '');
+            $template = sanitize_text_field($input['name_template'] ?? '');
+            $out['status'] = isset(self::STATUSES[$status]) ? $status : self::DEFAULTS['status'];
+            $out['update_existing'] = empty($input['update_existing']) ? 0 : 1;
+            $out['update_fields'] = array_values(array_intersect(array_keys(self::UPDATE_FIELDS), (array) ($input['update_fields'] ?? [])));
+            $out['import_images'] = empty($input['import_images']) ? 0 : 1;
+            $out['category'] = sanitize_text_field($input['category'] ?? '');
+            $out['name_template'] = false !== strpos($template, '{nombre}') ? $template : self::DEFAULTS['name_template'];
+            $out['min_stock'] = max(0, (int) ($input['min_stock'] ?? self::DEFAULTS['min_stock']));
+            $out['describe'] = empty($input['describe']) ? 0 : 1;
         }
 
-        $status = sanitize_key($input['status'] ?? '');
-        $fields = array_values(array_intersect(array_keys(self::UPDATE_FIELDS), (array) ($input['update_fields'] ?? [])));
-        $factor = (float) str_replace(',', '.', (string) ($input['price_factor'] ?? '1'));
-        $source = sanitize_key($input['price_source'] ?? '');
-        $template = sanitize_text_field($input['name_template'] ?? '');
+        // Secretos: vacío = conservar; casilla <clave>_clear = borrar.
+        foreach (self::SECRETS as $key) {
+            $value = trim((string) ($input[$key] ?? ''));
+            if ('' !== $value) {
+                $out[$key] = 'password' === $key ? (string) $input[$key] : sanitize_text_field($value);
+            }
+            if (!empty($input[$key . '_clear'])) {
+                $out[$key] = '';
+            }
+        }
 
-        return [
-            'base_url' => $base_url,
-            'login_path' => self::path($input['login_path'] ?? '', self::DEFAULTS['login_path']),
-            'catalog_path' => self::path($input['catalog_path'] ?? '', self::DEFAULTS['catalog_path']),
-            'email' => sanitize_email($input['email'] ?? ''),
-            'password' => $password,
-            'status' => isset(self::STATUSES[$status]) ? $status : self::DEFAULTS['status'],
-            'update_existing' => empty($input['update_existing']) ? 0 : 1,
-            'update_fields' => $fields,
-            'import_images' => empty($input['import_images']) ? 0 : 1,
-            'import_categories' => empty($input['import_categories']) ? 0 : 1,
-            'category_parent' => sanitize_text_field($input['category_parent'] ?? ''),
-            'name_template' => false !== strpos($template, '{nombre}') ? $template : self::DEFAULTS['name_template'],
-            'price_source' => isset(self::PRICE_SOURCES[$source]) ? $source : self::DEFAULTS['price_source'],
-            'price_factor' => $factor > 0 ? round($factor, 4) : 1,
-        ];
+        return array_intersect_key($out, self::DEFAULTS);
     }
 
     private static function path($value, $default)

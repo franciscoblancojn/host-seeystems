@@ -99,3 +99,10 @@
 	background: #f0f0f1;
 	border-radius: 2px;
 }
+
+.hsy-page .hsy-help {
+	list-style: disc;
+	margin: 8px 0 0 20px;
+	max-width: 760px;
+	color: #50575e;
+}

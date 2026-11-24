@@ -4,6 +4,24 @@ Todos los cambios importantes del plugin Host Seeystems. Formato basado en [Keep
 
 > ✍️ Antes de publicar, agrega arriba una sección `## [Sin publicar]` con los cambios. `npm run push-v -- patch|minor|major` la renombra a `## [X.Y.Z] - fecha`, y no publica si esa sección no existe.
 
+## [Sin publicar]
+
+### ✨ Añadido
+- 🔖 Meta `_hsy_imported = yes` en todos los productos importados.
+- 📦 **Stock mínimo** en Importación (3 por defecto): al importar, con el mínimo o menos el producto queda con stock 0; después, si el stock de un producto importado baja hasta el mínimo o por debajo (venta, edición, API), se pone en 0 automáticamente y se anota en el log.
+- 💰 **Precio mayorista** en la meta `_hsy_wholesale_price`: se actualiza en cada importación (aunque «actualizar existentes» esté apagado) y se muestra en el editor del producto junto a los precios, con el margen sobre el precio normal.
+- 🔎 **Descripción desde Google** (vía Serper.dev) para productos sin descripción: solo acepta páginas o resultados con la referencia exacta y nunca reemplaza una descripción existente.
+- 🏷️ Característica «Referencia» en los atributos.
+
+### 🔄 Cambiado
+- 🏷️ La marca va solo a la taxonomía de marcas (`product_brand`) y ya no se crea como categoría. Si no existe se crea en formato normal («ARMANI EXCHANGE» → «Armani Exchange»); si existe se reutiliza sin distinguir mayúsculas.
+- 💲 El precio normal es siempre el **PVP sugerido**; se quitan las opciones «precio de venta» y «multiplicador». El precio rebajado no se toca.
+- 🧾 Características con el mismo formato que la ficha del catálogo (Caja «Acero, Dorado») y género tal cual (DAMA); la etiqueta de disponibilidad (DISPONIBLE, EN TRÁNSITO, SIN STOCK) ya no se trata como descripción.
+- ⚙️ Pestaña Importación reorganizada: Productos, Stock mínimo y Descripción desde Google, con la explicación de cada opción. «Categoría padre» pasa a ser una categoría opcional para los productos nuevos.
+
+### 🗑️ Eliminado
+- Meta `_hsy_cost` (reemplazada por `_hsy_wholesale_price`).
+
 ## [1.0.0] - 2026-11-23
 
 ### ✨ Añadido

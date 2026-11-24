@@ -15,6 +15,21 @@
 3. Se importa uno a uno (botón de la fila), los seleccionados o todos los visibles. La importación va por lotes con barra de progreso.
 4. Cada producto creado guarda su id de origen: volver a importarlo **actualiza** el mismo producto (según los campos elegidos en **Importación**) en lugar de duplicarlo.
 
+Ejemplo (ficha del catálogo → producto de WooCommerce):
+
+| Catálogo | WooCommerce |
+|---|---|
+| ARMANI EXCHANGE | Marca «Armani Exchange» (`product_brand`, se crea si no existe) |
+| LEILA SET | Nombre |
+| AX7186SET | SKU y característica «Referencia» |
+| Genero, Correa, Caja, Tamano | Atributos visibles y descripción corta |
+| PVP sugerido $1.019.900 | Precio normal |
+| Precio mayorista $611.940 | Meta `_hsy_wholesale_price`, visible en el editor junto a los precios |
+| Stock 3 (mínimo 3) | Stock 0 |
+| Sin descripción | Descripción encontrada en Google (opcional) |
+
+Todos los productos importados llevan la meta `_hsy_imported = yes`. Si su stock baja hasta el mínimo o por debajo, se pone en 0 automáticamente.
+
 ## ⚙️ Configuración
 
 En el menú **Importar productos** del admin:
@@ -23,7 +38,7 @@ En el menú **Importar productos** del admin:
 |---|---|
 | Productos | Cargar el catálogo, buscar, importar individual / seleccionados / todos. |
 | Conexión | URL del catálogo, correo, contraseña (no se muestra; vacío = conservar), rutas de login y catálogo, «Probar conexión». |
-| Importación | Estado de los nuevos (borrador por defecto), actualizar existentes y qué campos, imágenes, categorías, multiplicador de precio. |
+| Importación | Estado de los nuevos (borrador por defecto), plantilla del nombre, categoría opcional, qué se actualiza en los existentes, imágenes, **stock mínimo** (3 por defecto) y **descripción desde Google** (API key de Serper.dev). |
 
 ## 📋 Requisitos
 

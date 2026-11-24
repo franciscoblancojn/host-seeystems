@@ -36,8 +36,8 @@ $catalog = new HSY_USE_DATA_CATALOG();
                 <td class="manage-column check-column"><input type="checkbox" class="hsy-check-all"></td>
                 <th class="hsy-col-product">Producto</th>
                 <th>Referencia</th>
-                <th>PVP</th>
-                <th>Precio cliente</th>
+                <th>PVP sugerido</th>
+                <th>Precio mayorista</th>
                 <th>Inventario</th>
                 <th>Estado</th>
                 <th class="hsy-col-action"></th>

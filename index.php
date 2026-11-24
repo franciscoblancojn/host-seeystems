@@ -32,6 +32,8 @@ define("HSY_CAPABILITY", 'manage_woocommerce');
 define("HSY_SESSION", 'hsy_session');        // transient: cookies de la sesión en el catálogo
 define("HSY_CATALOG", 'HSY_CATALOG');        // opción: último catálogo leído (no autoload)
 define("HSY_SOURCE_META", '_hsy_source_id'); // meta del producto: id en el catálogo de origen
+define("HSY_IMPORTED_META", '_hsy_imported'); // meta del producto: 'yes' si se importó del catálogo
+define("HSY_WHOLESALE_META", '_hsy_wholesale_price'); // meta del producto: precio mayorista del catálogo
 define("HSY_BATCH_SIZE", 5);                 // productos por petición al importar (descarga imágenes)
 define("HSY_MAX_PAGES", 50);                 // tope de páginas del catálogo por lectura
 define("HSY_REPOSITORY", 'franciscoblancojn/host-seeystems');

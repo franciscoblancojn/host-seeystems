@@ -4,14 +4,14 @@
  * Crea o actualiza productos de WooCommerce a partir de un producto normalizado del catálogo.
  *
  * Producto normalizado (lo produce HSY_PARSER):
- *   id (string, único en el origen), sku, name, brand, description, short_description,
- *   pvp (float|null, precio al público), cost (float|null, precio del cliente), price_type,
- *   availability (etiqueta del origen), stock (int|null), incoming (unidades en tránsito),
- *   attributes (nombre => valor), images (URLs absolutas),
- *   categories (nombres; "Padre > Hijo" para jerarquía), url.
+ *   id (string, único en el origen), sku (referencia), name, brand, description, short_description,
+ *   pvp (float|null, PVP sugerido = precio normal), wholesale (float|null, precio mayorista),
+ *   price_type, availability (etiqueta del origen), stock (int|null, ya sin reservas),
+ *   incoming (unidades en tránsito), attributes (nombre => valor), images (URLs absolutas), url.
  *
  * Un producto ya importado se reconoce por la meta HSY_SOURCE_META y, si no la tiene,
- * por el SKU. Es la única clase que escribe productos.
+ * por el SKU. Es la única clase que escribe productos. Siempre deja HSY_IMPORTED_META = 'yes'
+ * y actualiza el precio mayorista (HSY_WHOLESALE_META), aunque no se actualice nada más.
  */
 class HSY_IMPORTER
 {
@@ -36,7 +36,8 @@ class HSY_IMPORTER
     }
 
     /**
-     * Importa un producto. Devuelve ['id', 'action' => created|updated|skipped, 'warnings'] o WP_Error.
+     * Importa un producto. Devuelve ['id', 'action' => created|updated, 'warnings'] o WP_Error.
+     * Con «actualizar existentes» desactivado, un existente solo actualiza precio mayorista y metas.
      */
     public static function import($item, $config = null)
     {
@@ -48,15 +49,18 @@ class HSY_IMPORTER
 
         $product_id = self::find($item);
         $is_new = !$product_id;
-        if (!$is_new && !$config['update_existing']) {
-            return ['id' => $product_id, 'action' => 'skipped', 'warnings' => []];
-        }
-
         $product = $is_new ? new WC_Product_Simple() : wc_get_product($product_id);
         if (!$product) {
             return new WP_Error('hsy_product', 'No se pudo abrir el producto #' . $product_id . '.');
         }
-        $fields = $is_new ? array_keys(HSY_USE_DATA_CONFIG::UPDATE_FIELDS) : (array) $config['update_fields'];
+        if ($is_new) {
+            $fields = array_keys(HSY_USE_DATA_CONFIG::UPDATE_FIELDS);
+        } else {
+            $fields = $config['update_existing'] ? (array) $config['update_fields'] : [];
+        }
+        $has = function ($field) use ($fields) {
+            return in_array($field, $fields, true);
+        };
         $warnings = [];
 
         if ($is_new) {
@@ -69,46 +73,54 @@ class HSY_IMPORTER
                     $warnings[] = 'SKU ' . $item['sku'] . ' no asignado: ' . $e->getMessage();
                 }
             }
+            if ('' !== trim((string) $config['category'])) {
+                $product->set_category_ids(self::category_ids([$config['category']]));
+            }
         }
-        if (in_array('name', $fields, true)) {
+        if ($has('name')) {
             $product->set_name(self::name($item, $config['name_template']));
         }
-        if (in_array('description', $fields, true)) {
-            $product->set_description($item['description']);
+        if ($has('price') && null !== $item['pvp']) {
+            // PVP sugerido = precio normal. El precio rebajado lo define la tienda: no se toca.
+            $product->set_regular_price((string) round($item['pvp'], wc_get_price_decimals()));
+        }
+        if ($has('stock') && null !== $item['stock']) {
+            $product->set_manage_stock(true);
+            $product->set_stock_quantity(HSY_STOCK::apply($item['stock'], $config['min_stock']));
+        }
+        if ($has('attributes')) {
+            $product->set_attributes(self::attributes($item['attributes']));
             $product->set_short_description($item['short_description']);
         }
-        if (in_array('price', $fields, true)) {
-            self::set_prices($product, $item, $config);
-        }
-        if (in_array('stock', $fields, true) && null !== $item['stock']) {
-            $product->set_manage_stock(true);
-            $product->set_stock_quantity($item['stock']);
-        }
-        if ($config['import_categories'] && in_array('categories', $fields, true) && $item['categories']) {
-            $parent = trim((string) $config['category_parent']);
-            $paths = array_map(function ($name) use ($parent) {
-                return '' !== $parent ? $parent . ' > ' . $name : $name;
-            }, $item['categories']);
-            $product->set_category_ids(self::category_ids($paths));
-        }
-        if (in_array('attributes', $fields, true) && $item['attributes']) {
-            $product->set_attributes(self::attributes($item['attributes']));
+        if ($has('description') && '' === trim(wp_strip_all_tags($product->get_description()))) {
+            $description = self::description($item, $config);
+            if (is_wp_error($description)) {
+                if ('hsy_describe_off' !== $description->get_error_code()) {
+                    $warnings[] = $description->get_error_message();
+                }
+            } elseif ('' !== $description['text']) {
+                $product->set_description(wpautop(esc_html($description['text'])));
+                $product->update_meta_data('_hsy_description_source', $description['source']);
+            }
         }
 
+        // Siempre: marca de importado, precio mayorista y datos del origen.
+        $product->update_meta_data(HSY_IMPORTED_META, 'yes');
         $product->update_meta_data(HSY_SOURCE_META, $item['id']);
-        $product->update_meta_data('_hsy_source_url', $item['url']);
-        $product->update_meta_data('_hsy_cost', null !== $item['cost'] ? $item['cost'] : '');
-        $product->update_meta_data('_hsy_pvp', null !== $item['pvp'] ? $item['pvp'] : '');
+        $product->update_meta_data(HSY_WHOLESALE_META, null !== $item['wholesale'] ? (string) $item['wholesale'] : '');
+        $product->update_meta_data('_hsy_pvp', null !== $item['pvp'] ? (string) $item['pvp'] : '');
         $product->update_meta_data('_hsy_availability', $item['availability']);
+        $product->update_meta_data('_hsy_stock_source', null !== $item['stock'] ? $item['stock'] : '');
         $product->update_meta_data('_hsy_imported_at', time());
         $product_id = $product->save();
 
-        if (in_array('attributes', $fields, true) && '' !== $item['brand'] && taxonomy_exists('product_brand')) {
-            // Marcas de WooCommerce (9.6+): se crea la marca si no existe.
-            wp_set_object_terms($product_id, $item['brand'], 'product_brand');
+        if ($has('attributes') && '' !== $item['brand']) {
+            $brand = self::set_brand($product_id, $item['brand']);
+            if (is_wp_error($brand)) {
+                $warnings[] = $brand->get_error_message();
+            }
         }
-
-        if ($config['import_images'] && in_array('images', $fields, true) && $item['images']) {
+        if ($config['import_images'] && $has('images') && $item['images']) {
             $warnings = array_merge($warnings, self::set_images($product, $item['images']));
         }
 
@@ -117,6 +129,7 @@ class HSY_IMPORTER
             'source_id' => $item['id'],
             'product_id' => $product_id,
             'sku' => $item['sku'],
+            'fields' => $fields,
             'warnings' => $warnings,
         ]);
         return ['id' => $product_id, 'action' => $action, 'warnings' => $warnings];
@@ -138,12 +151,11 @@ class HSY_IMPORTER
             'description' => wp_kses_post((string) ($item['description'] ?? '')),
             'short_description' => wp_kses_post((string) ($item['short_description'] ?? '')),
             'pvp' => $num($item['pvp'] ?? null),
-            'cost' => $num($item['cost'] ?? null),
+            'wholesale' => $num($item['wholesale'] ?? null),
             'availability' => wc_clean((string) ($item['availability'] ?? '')),
             'stock' => isset($item['stock']) && '' !== $item['stock'] && null !== $item['stock'] ? (int) $item['stock'] : null,
             'attributes' => array_filter(array_map('wc_clean', (array) ($item['attributes'] ?? [])), 'strlen'),
             'images' => array_values(array_filter(array_map('esc_url_raw', (array) ($item['images'] ?? [])))),
-            'categories' => array_values(array_filter(array_map('wc_clean', (array) ($item['categories'] ?? [])))),
             'url' => esc_url_raw((string) ($item['url'] ?? '')),
         ];
     }
@@ -180,21 +192,41 @@ class HSY_IMPORTER
     }
 
     /**
-     * Precio normal = PVP o precio del cliente (según el ajuste) × multiplicador. Sin precio rebajado:
-     * la diferencia entre PVP y precio del cliente es el margen, no una oferta.
+     * Descripción del origen o, si no trae, la que se encuentre en Google.
      */
-    private static function set_prices($product, $item, $config)
+    private static function description($item, $config)
     {
-        $base = 'cost' === $config['price_source'] ? $item['cost'] : $item['pvp'];
-        if (null === $base) {
-            $base = null !== $item['pvp'] ? $item['pvp'] : $item['cost'];
+        if ('' !== trim(wp_strip_all_tags($item['description']))) {
+            return ['text' => wp_strip_all_tags($item['description']), 'source' => 'catalogo'];
         }
-        if (null === $base) {
-            return;
+        return HSY_DESCRIBER::find($item['brand'], $item['name'], $item['sku'], $config);
+    }
+
+    /**
+     * Marca en la taxonomía product_brand (WooCommerce 9.6+ o el tema). Se reutiliza la existente
+     * sin distinguir mayúsculas; si no existe se crea con el nombre normalizado («Armani Exchange»).
+     */
+    private static function set_brand($product_id, $brand)
+    {
+        if (!taxonomy_exists('product_brand')) {
+            return new WP_Error('hsy_brand', 'No existe la taxonomía de marcas (product_brand): la marca ' . $brand . ' no se asignó.');
         }
-        $factor = (float) $config['price_factor'] > 0 ? (float) $config['price_factor'] : 1;
-        $product->set_regular_price((string) round($base * $factor, wc_get_price_decimals()));
-        $product->set_sale_price('');
+        $term = get_term_by('slug', sanitize_title($brand), 'product_brand');
+        if (!$term) {
+            $term = get_term_by('name', $brand, 'product_brand'); // la comparación de MySQL no distingue mayúsculas
+        }
+        if (!$term) {
+            $created = wp_insert_term($brand, 'product_brand');
+            if (is_wp_error($created)) {
+                return $created;
+            }
+            HSY_LOG_SERVICE::add('marca_creada', ['marca' => $brand, 'term_id' => $created['term_id']]);
+            $term_id = (int) $created['term_id'];
+        } else {
+            $term_id = (int) $term->term_id;
+        }
+        $set = wp_set_object_terms($product_id, [$term_id], 'product_brand');
+        return is_wp_error($set) ? $set : $term_id;
     }
 
     /**

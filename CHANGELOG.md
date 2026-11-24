@@ -4,7 +4,7 @@ Todos los cambios importantes del plugin Host Seeystems. Formato basado en [Keep
 
 > ✍️ Antes de publicar, agrega arriba una sección `## [Sin publicar]` con los cambios. `npm run push-v -- patch|minor|major` la renombra a `## [X.Y.Z] - fecha`, y no publica si esa sección no existe.
 
-## [Sin publicar]
+## [1.0.0] - 2026-11-23
 
 ### ✨ Añadido
 - 🎉 Primera versión: conexión con un catálogo B2B externo mediante usuario y clave (login por formulario con `csrf_token` y sesión por cookie, con re-login automático).

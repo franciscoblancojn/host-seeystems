@@ -1,0 +1,101 @@
+/* Host Seeystems — admin. Prefijo hsy- (las clases fwue- son de wordpress_utils). */
+.hsy-page .hsy-version {
+	font-size: 13px;
+	font-weight: 400;
+	color: #646970;
+}
+
+.hsy-page .tab-content {
+	display: none;
+}
+
+.hsy-page .tab-content.nav-tab-active {
+	display: block;
+}
+
+.hsy-page .fwue-message {
+	max-width: 900px;
+}
+
+.hsy-page .hsy-muted {
+	color: #646970;
+}
+
+.hsy-page .hsy-error {
+	color: #b32d2e;
+}
+
+.hsy-page .hsy-warning {
+	color: #996800;
+	font-size: 12px;
+}
+
+.hsy-page .hsy-toolbar,
+.hsy-page .hsy-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	align-items: center;
+	margin: 12px 0;
+}
+
+.hsy-page .hsy-toolbar .spinner {
+	float: none;
+	margin: 0;
+}
+
+.hsy-page .hsy-fields {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px 16px;
+	margin: 8px 0 0 24px;
+}
+
+.hsy-page .hsy-progress {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	max-width: 600px;
+	margin: 8px 0;
+}
+
+.hsy-page .hsy-progress__bar {
+	flex: 1;
+	height: 8px;
+	background: #dcdcde;
+	border-radius: 4px;
+	overflow: hidden;
+}
+
+.hsy-page .hsy-progress__bar span {
+	display: block;
+	height: 100%;
+	width: 0;
+	background: #2271b1;
+	transition: width .2s;
+}
+
+.hsy-page .hsy-table .hsy-col-product {
+	width: 34%;
+}
+
+.hsy-page .hsy-table .hsy-col-action {
+	width: 90px;
+	text-align: right;
+}
+
+.hsy-page .hsy-product {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+}
+
+.hsy-page .hsy-product img,
+.hsy-page .hsy-noimg {
+	width: 40px;
+	height: 40px;
+	object-fit: cover;
+	flex: none;
+	background: #f0f0f1;
+	border-radius: 2px;
+}

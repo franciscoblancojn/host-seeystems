@@ -1,0 +1,36 @@
+# Host Seeystems — Reglas para IAs
+
+## Código
+- **PHP 7.4+**, estándares de WordPress. Clases y funciones con prefijo `HSY_`.
+- **JavaScript ES5 + jQuery** (sin arrow functions, `let`/`const` ni template literals). Funciones con prefijo `hsy_`.
+- **CSS** con prefijo `hsy-` (las clases `fwue-` son de `wordpress_utils`).
+- Escapar toda salida (`esc_html`, `esc_attr`, `esc_url`, `wp_kses_post`) y sanitizar toda entrada.
+
+## Seguridad
+- Guardar ajustes: `check_admin_referer(HSY_API_SETTINGS::ACTION)` + `current_user_can(HSY_CAPABILITY)`.
+- `FWUUpdate` lee el token de `index.php` (`token_array_split`). Es el mismo token de los demás plugins del autor (solo lee repos públicos) y va troceado a propósito. No agregar otras claves o secretos al código: `npm run check` falla si encuentra un token escrito de corrido.
+- Las credenciales del catálogo de origen se guardan solo en `HSY_CONFIG` (wp_options, sin autoload). La contraseña **nunca** se imprime en el HTML ni se escribe en el log; el campo vacío conserva la guardada.
+- AJAX (`HSY_API_IMPORT`): `guard()` con `check_ajax_referer(HSY_API_IMPORT::NONCE)` + `current_user_can(HSY_CAPABILITY)`.
+
+## Arquitectura
+- `index.php`: cabecera y constantes `HSY_*`. Sin lógica. WooCommerce es **obligatorio**: sin él solo se muestra un aviso en el admin.
+- `src/_.php`: cargador maestro (data → services → hooks → api → page). Cada carpeta tiene su `_.php`; un archivo nuevo se agrega a ese `_.php` con `require_once HSY_DIR . 'src/…'`.
+- `src/data/`: opciones de `wp_options` (`HSY_USE_DATA_BASE` y sus hijas). `HSY_USE_DATA_CONFIG::DEFAULTS` es la única lista de ajustes; `sanitize()` la normaliza.
+- `src/services/`: lógica (clases `HSY_*` estáticas). Una sola fuente por regla de negocio.
+- `src/hooks/`: integración con WordPress / WooCommerce (`add_action` / `add_filter`).
+- `src/api/`: entradas `admin-post` y AJAX.
+- `src/page/`: menú (`add.php`), página con pestañas `FWUPage` (`page.php`) y una sección por pestaña (`sections/<key>.php`).
+- Reglas propias (una sola fuente para cada cosa):
+  - `HSY_CLIENT` es la **única** clase que habla con el catálogo de origen (login por formulario con `csrf_token`, cookies en el transient `HSY_SESSION`, re-login automático si la sesión caduca). Solo pide URLs del mismo host que `base_url`.
+  - `HSY_PARSER` es la **única** que conoce el HTML del origen y lo convierte en el producto normalizado documentado en `HSY_IMPORTER`. Si el origen cambia su HTML, solo se toca el parser.
+  - `HSY_USE_DATA_CATALOG` (opción `HSY_CATALOG`, sin autoload) es la **única** fuente de lo que se puede importar: la tabla y los lotes leen de ahí, no del origen.
+  - `HSY_IMPORTER` es la **única** que escribe productos. Un producto importado se reconoce por la meta `_hsy_source_id` (y si no, por el SKU). Las imágenes se reutilizan por `_hsy_source_url`.
+  - Importación por lotes de `HSY_BATCH_SIZE` desde el JS (sin peticiones largas ni cron).
+- Plugin genérico: **no** usar nombres ni textos de un sitio concreto (el contenido por defecto es solo un ejemplo editable).
+- Rendimiento: CSS/JS del admin solo en la página del plugin; en el sitio, solo donde se usa.
+- Toda operación relevante queda en el log: `HSY_LOG_SERVICE::add('tipo', [...])`.
+- `libs/` es Composer (`npm run install`) y se versiona: el zip de `master` que instala `FWUUpdate` lo necesita. No editar a mano.
+
+## Publicar
+- Anotar los cambios en `CHANGELOG.md` bajo `## [Sin publicar]`.
+- `npm run push-v -- patch|minor|major`.

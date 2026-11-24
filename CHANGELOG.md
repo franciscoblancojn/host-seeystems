@@ -4,7 +4,7 @@ Todos los cambios importantes del plugin Host Seeystems. Formato basado en [Keep
 
 > ✍️ Antes de publicar, agrega arriba una sección `## [Sin publicar]` con los cambios. `npm run push-v -- patch|minor|major` la renombra a `## [X.Y.Z] - fecha`, y no publica si esa sección no existe.
 
-## [Sin publicar]
+## [1.2.0] - 2026-11-24
 
 ### ✨ Añadido
 - 🔁 **Varias conexiones de IA con respaldo**: en Importación → Descripciones se marcan las conexiones de IA Conector que se pueden usar y se ordenan con ↑ ↓. Se usa la primera; si falla (tokens o límite de uso agotados, modelo inexistente, sin conexión…) se prueba la siguiente hasta que una responda.

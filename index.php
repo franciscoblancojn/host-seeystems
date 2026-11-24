@@ -3,7 +3,7 @@
 Plugin Name: Host Seeystems
 Plugin URI: https://github.com/franciscoblancojn/host-seeystems
 Description: Conecta con un catálogo B2B externo mediante usuario y clave y permite importar sus productos a WooCommerce, de forma individual o masiva.
-Version: 1.1.0
+Version: 1.2.0
 Author: franciscoblancojn
 Author URI: https://franciscoblanco.vercel.app/
 License: GPL2+

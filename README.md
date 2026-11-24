@@ -2,7 +2,7 @@
 
 > Conecta con un catálogo B2B externo mediante usuario y clave y permite importar sus productos a WooCommerce, de forma individual o masiva.
 
-**Versión:** 1.0.0 · **WordPress:** 5.8+ · **PHP:** 7.4+ · **WooCommerce:** requerido · **Licencia:** GPLv2+
+**Versión:** 1.0.1 · **WordPress:** 5.8+ · **PHP:** 7.4+ · **WooCommerce:** requerido · **Licencia:** GPLv2+
 
 📋 [Registro de cambios](CHANGELOG.md) · 🤖 [Reglas para IAs](AGENTS.md) · 📦 [Releases](https://github.com/franciscoblancojn/host-seeystems/releases)
 

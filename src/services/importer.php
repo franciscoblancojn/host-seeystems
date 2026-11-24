@@ -178,12 +178,13 @@ class HSY_IMPORTER
     }
 
     /**
-     * Nombre según la plantilla ({nombre}, {marca}, {ref}).
+     * Nombre según la plantilla ({nombre}, {genero}, {marca}, {ref}). Una variable vacía no deja espacios dobles.
      */
     private static function name($item, $template)
     {
         $name = strtr((string) $template, [
             '{nombre}' => $item['name'],
+            '{genero}' => (string) ($item['attributes']['Género'] ?? ''),
             '{marca}' => $item['brand'],
             '{ref}' => $item['sku'],
         ]);

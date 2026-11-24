@@ -21,7 +21,7 @@
         <th scope="row"><label for="hsy-name-template">Nombre del producto</label></th>
         <td>
             <input type="text" id="hsy-name-template" name="hsy[name_template]" value="<?= esc_attr($config['name_template']) ?>" class="regular-text code">
-            <p class="description">Plantilla con <code>{nombre}</code> (obligatorio), <code>{marca}</code> y <code>{ref}</code>. P. ej. <code>{marca} {nombre} {ref}</code>.</p>
+            <p class="description">Plantilla con <code>{nombre}</code> (obligatorio), <code>{genero}</code>, <code>{marca}</code> y <code>{ref}</code>. Por defecto <code>{nombre} {genero} {marca} {ref}</code> → «LEILA SET DAMA Armani Exchange AX7186SET».</p>
         </td>
     </tr>
     <tr>
@@ -36,7 +36,7 @@
         <td>
             <ul class="hsy-help">
                 <li><strong>Marca</strong> → marca del producto (<code>product_brand</code>). Si no existe se crea en formato normal: «ARMANI EXCHANGE» → «Armani Exchange».</li>
-                <li><strong>Nombre</strong> → nombre (según la plantilla). <strong>Referencia</strong> → SKU.</li>
+                <li><strong>Nombre</strong> → nombre del producto según la plantilla (nombre, género, marca y referencia). <strong>Referencia</strong> → SKU.</li>
                 <li><strong>Características</strong> (Género, Correa, Caja, Tamaño, Resistencia al agua, Referencia) → atributos visibles y descripción corta.</li>
                 <li><strong>PVP sugerido</strong> → precio normal. El precio rebajado no se toca.</li>
                 <li><strong>Precio mayorista</strong> → meta <code><?= esc_html(HSY_WHOLESALE_META) ?></code>, se actualiza en cada importación y se ve en el editor del producto, junto a los precios.</li>

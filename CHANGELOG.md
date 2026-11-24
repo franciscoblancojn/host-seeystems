@@ -4,6 +4,14 @@ Todos los cambios importantes del plugin Host Seeystems. Formato basado en [Keep
 
 > ✍️ Antes de publicar, agrega arriba una sección `## [Sin publicar]` con los cambios. `npm run push-v -- patch|minor|major` la renombra a `## [X.Y.Z] - fecha`, y no publica si esa sección no existe.
 
+## [Sin publicar]
+
+### ✨ Añadido
+- ✏️ Variable `{genero}` en la plantilla del nombre.
+
+### 🔄 Cambiado
+- ✏️ Plantilla del nombre por defecto: `{nombre} {genero} {marca} {ref}` (p. ej. «LEILA SET DAMA Armani Exchange AX7186SET»). Si ya hay una plantilla guardada, se conserva.
+
 ## [1.0.1] - 2026-11-23
 
 ### ✨ Añadido

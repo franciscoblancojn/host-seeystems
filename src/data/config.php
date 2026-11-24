@@ -23,7 +23,7 @@ class HSY_USE_DATA_CONFIG extends HSY_USE_DATA_BASE
         'update_fields' => ['price', 'stock'], // qué se actualiza en los existentes (el precio mayorista, siempre)
         'import_images' => 1,
         'category' => '',          // categoría para los productos nuevos ('' = ninguna)
-        'name_template' => '{nombre}', // {nombre} {marca} {ref}
+        'name_template' => '{nombre} {genero} {marca} {ref}', // variables: {nombre} {genero} {marca} {ref}
         // Stock mínimo: con min_stock unidades o menos el producto importado queda con stock 0.
         'min_stock' => 3,
         // Descripción desde Google (vía Serper.dev) cuando el producto no tiene.

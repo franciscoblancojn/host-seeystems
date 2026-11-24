@@ -106,3 +106,22 @@
 	max-width: 760px;
 	color: #50575e;
 }
+
+.hsy-page .hsy-content-bar {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	align-items: center;
+	margin: 8px 0;
+}
+
+.hsy-page .hsy-prompt {
+	max-width: 760px;
+	max-height: 320px;
+	overflow: auto;
+	white-space: pre-wrap;
+	background: #f6f7f7;
+	border: 1px solid #dcdcde;
+	padding: 8px 12px;
+	font-size: 12px;
+}

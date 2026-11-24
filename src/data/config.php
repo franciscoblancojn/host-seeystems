@@ -26,8 +26,12 @@ class HSY_USE_DATA_CONFIG extends HSY_USE_DATA_BASE
         'name_template' => '{nombre} {genero} {marca} {ref}', // variables: {nombre} {genero} {marca} {ref}
         // Stock mínimo: con min_stock unidades o menos el producto importado queda con stock 0.
         'min_stock' => 3,
-        // Descripción desde Google (vía Serper.dev) cuando el producto no tiene.
-        'describe' => 0,
+        // Descripciones pendientes (HSY_CONTENT): IA del plugin IA Conector y/o Google (Serper.dev).
+        'ai_enabled' => 0,
+        'ai_connection' => '',     // key de la conexión en IA Conector
+        'ai_instructions' => '',   // instrucciones extra para la IA (tono, largo…)
+        'content_after_import' => 1, // generar lo pendiente justo después de importar
+        'describe' => 0,           // buscar en Google (contexto para la IA o descripción directa sin IA)
         'serper_key' => '',
     ];
 
@@ -39,7 +43,6 @@ class HSY_USE_DATA_CONFIG extends HSY_USE_DATA_BASE
         'stock' => 'Inventario',
         'attributes' => 'Características y marca',
         'images' => 'Imágenes',
-        'description' => 'Descripción (solo si está vacía)',
     ];
 
     /** Ajustes secretos: nunca se imprimen; vacío en el formulario = conservar. */
@@ -98,6 +101,10 @@ class HSY_USE_DATA_CONFIG extends HSY_USE_DATA_BASE
             $out['name_template'] = false !== strpos($template, '{nombre}') ? $template : self::DEFAULTS['name_template'];
             $out['min_stock'] = max(0, (int) ($input['min_stock'] ?? self::DEFAULTS['min_stock']));
             $out['describe'] = empty($input['describe']) ? 0 : 1;
+            $out['ai_enabled'] = empty($input['ai_enabled']) ? 0 : 1;
+            $out['ai_connection'] = sanitize_text_field($input['ai_connection'] ?? '');
+            $out['ai_instructions'] = sanitize_textarea_field($input['ai_instructions'] ?? '');
+            $out['content_after_import'] = empty($input['content_after_import']) ? 0 : 1;
         }
 
         // Secretos: vacío = conservar; casilla <clave>_clear = borrar.

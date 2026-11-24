@@ -4,6 +4,19 @@ Todos los cambios importantes del plugin Host Seeystems. Formato basado en [Keep
 
 > ✍️ Antes de publicar, agrega arriba una sección `## [Sin publicar]` con los cambios. `npm run push-v -- patch|minor|major` la renombra a `## [X.Y.Z] - fecha`, y no publica si esa sección no existe.
 
+## [Sin publicar]
+
+### ✨ Añadido
+- 🤖 **Descripciones con IA** usando el plugin IA Conector (Gemini, Groq…): genera la descripción y la descripción corta de los productos importados que las tienen pendientes. Se elige la conexión y se pueden añadir instrucciones (tono, largo); se puede ver el prompt de ejemplo.
+- ⏱️ Se generan justo después de importar (opcional) o con el botón «Generar descripciones pendientes» de la pestaña Productos, de a un producto y con progreso.
+- 🔎 Si la búsqueda en Google está activa, lo encontrado se pasa a la IA como contexto.
+
+### 🔄 Cambiado
+- 📝 «Pendiente» = producto importado sin descripción, o con la descripción corta automática (lista de características, meta `_hsy_short_auto`). Lo escrito a mano o generado antes nunca se reemplaza; los productos importados antes también se reconocen.
+- 🧾 La lista de características pasa a ser la descripción corta **provisional**: al reimportar solo se reescribe si sigue siendo la automática.
+- 🔎 La búsqueda en Google ya no corre al importar, sino en el paso de descripciones (sin IA, el texto encontrado sigue siendo la descripción).
+- ⚙️ La sección «Descripción desde Google» de Importación pasa a llamarse **Descripciones** (IA, después de importar, Google y API key).
+
 ## [1.0.2] - 2026-11-23
 
 ### ✨ Añadido

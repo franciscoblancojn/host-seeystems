@@ -37,7 +37,7 @@
             <ul class="hsy-help">
                 <li><strong>Marca</strong> → marca del producto (<code>product_brand</code>). Si no existe se crea en formato normal: «ARMANI EXCHANGE» → «Armani Exchange».</li>
                 <li><strong>Nombre</strong> → nombre del producto según la plantilla (nombre, género, marca y referencia). <strong>Referencia</strong> → SKU.</li>
-                <li><strong>Características</strong> (Género, Correa, Caja, Tamaño, Resistencia al agua, Referencia) → atributos visibles y descripción corta.</li>
+                <li><strong>Características</strong> (Género, Correa, Caja, Tamaño, Resistencia al agua, Referencia) → atributos visibles. También como descripción corta provisional, hasta que se genere la definitiva (ver <strong>Descripciones</strong>).</li>
                 <li><strong>PVP sugerido</strong> → precio normal. El precio rebajado no se toca.</li>
                 <li><strong>Precio mayorista</strong> → meta <code><?= esc_html(HSY_WHOLESALE_META) ?></code>, se actualiza en cada importación y se ve en el editor del producto, junto a los precios.</li>
                 <li>Todos los productos importados llevan la meta <code><?= esc_html(HSY_IMPORTED_META) ?> = yes</code>.</li>
@@ -79,16 +79,73 @@
     </tr>
 </table>
 
-<h2>Descripción desde Google</h2>
+<h2>Descripciones</h2>
+<?php
+$hsy_connections = HSY_CONTENT::ai_connections();
+$hsy_example = HSY_CONTENT::prompt([
+    'nombre' => 'LEILA SET',
+    'marca' => 'Armani Exchange',
+    'referencia' => 'AX7186SET',
+    'género' => 'DAMA',
+    'correa' => 'Acero Dorado',
+    'caja' => 'Acero, Dorado',
+    'tamaño' => '27 mm',
+], null, $config['ai_instructions']);
+?>
 <table class="form-table" role="presentation">
     <tr>
-        <th scope="row">Buscar descripción</th>
+        <th scope="row">Qué se completa</th>
         <td>
-            <label><input type="checkbox" name="hsy[describe]" value="1" <?php checked($config['describe'], 1); ?>> Si el producto no tiene descripción, buscarla en Google al importar</label>
             <ul class="hsy-help">
-                <li>Busca «marca nombre referencia», abre los primeros resultados y solo usa una página que contenga <strong>la referencia exacta</strong> (para no traer la de otro modelo).</li>
-                <li>Toma la descripción del producto de esa página (datos estructurados o meta descripción) y guarda la URL de origen en <code>_hsy_description_source</code>.</li>
-                <li>Nunca reemplaza una descripción que ya exista. Si no encuentra nada, el producto se importa igual y se avisa.</li>
+                <li>Productos importados <strong>sin descripción</strong>, o cuya <strong>descripción corta</strong> sigue siendo la lista automática de características.</li>
+                <li>Lo escrito a mano o generado antes <strong>nunca se reemplaza</strong>.</li>
+                <li>Se genera justo después de importar (si está marcado abajo) o con el botón «Generar descripciones pendientes» de la pestaña Productos, de a un producto.</li>
+            </ul>
+        </td>
+    </tr>
+    <tr>
+        <th scope="row">Generar con IA</th>
+        <td>
+            <?php if (!HSY_CONTENT::ai_available()) : ?>
+                <p class="fwue-message hsy-message error">Necesita el plugin <strong>IA Conector</strong> activo, con al menos una conexión (Gemini, Groq…).</p>
+            <?php elseif (!$hsy_connections) : ?>
+                <p class="fwue-message hsy-message error">IA Conector está activo pero no tiene conexiones activas: crea una en su página de configuración.</p>
+            <?php endif; ?>
+            <label><input type="checkbox" name="hsy[ai_enabled]" value="1" <?php checked($config['ai_enabled'], 1); ?> <?= HSY_CONTENT::ai_available() ? '' : 'disabled' ?>> Generar la descripción y la descripción corta con IA</label>
+            <p>
+                <label for="hsy-ai-connection">Conexión</label>
+                <select id="hsy-ai-connection" name="hsy[ai_connection]">
+                    <option value="">— Elegir —</option>
+                    <?php foreach ($hsy_connections as $key => $label) : ?>
+                        <option value="<?= esc_attr($key) ?>" <?php selected($config['ai_connection'], $key); ?>><?= esc_html($label) ?></option>
+                    <?php endforeach; ?>
+                    <?php if ('' !== $config['ai_connection'] && !isset($hsy_connections[$config['ai_connection']])) : ?>
+                        <option value="<?= esc_attr($config['ai_connection']) ?>" selected><?= esc_html($config['ai_connection'] . ' (no disponible)') ?></option>
+                    <?php endif; ?>
+                </select>
+            </p>
+            <p>
+                <label for="hsy-ai-instructions">Instrucciones adicionales</label><br>
+                <textarea id="hsy-ai-instructions" name="hsy[ai_instructions]" rows="3" class="large-text" placeholder="P. ej.: Menciona que es ideal para regalo. Usa un tono elegante."><?= esc_textarea($config['ai_instructions']) ?></textarea>
+            </p>
+            <p class="description">La IA recibe el nombre, la marca, la referencia y las características del producto, y lo encontrado en Google si está activo. Tiene prohibido inventar datos técnicos y mencionar precios, stock o tiendas.
+                <button type="button" class="button-link" id="hsy-prompt-toggle">Ver el prompt de ejemplo</button></p>
+            <pre class="hsy-prompt" id="hsy-prompt" hidden><?= esc_html($hsy_example) ?></pre>
+        </td>
+    </tr>
+    <tr>
+        <th scope="row">Después de importar</th>
+        <td><label><input type="checkbox" name="hsy[content_after_import]" value="1" <?php checked($config['content_after_import'], 1); ?>> Generar las descripciones pendientes de los productos recién importados</label></td>
+    </tr>
+    <tr>
+        <th scope="row">Buscar en Google</th>
+        <td>
+            <label><input type="checkbox" name="hsy[describe]" value="1" <?php checked($config['describe'], 1); ?>> Buscar el producto en Google</label>
+            <ul class="hsy-help">
+                <li>Busca «marca nombre referencia» y solo usa una página o resultado que contenga <strong>la referencia exacta</strong> (para no traer la de otro modelo).</li>
+                <li><strong>Con IA:</strong> lo encontrado se le pasa como contexto, para que la descripción tenga datos reales del modelo.</li>
+                <li><strong>Sin IA:</strong> lo encontrado se usa tal cual como descripción (la descripción corta queda con la lista de características).</li>
+                <li>La URL de origen queda en <code>_hsy_description_source</code>.</li>
             </ul>
         </td>
     </tr>

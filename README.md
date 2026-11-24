@@ -22,11 +22,11 @@ Ejemplo (ficha del catálogo → producto de WooCommerce):
 | ARMANI EXCHANGE | Marca «Armani Exchange» (`product_brand`, se crea si no existe) |
 | LEILA SET | Nombre |
 | AX7186SET | SKU y característica «Referencia» |
-| Genero, Correa, Caja, Tamano | Atributos visibles y descripción corta |
+| Genero, Correa, Caja, Tamano | Atributos visibles (y descripción corta provisional) |
 | PVP sugerido $1.019.900 | Precio normal |
 | Precio mayorista $611.940 | Meta `_hsy_wholesale_price`, visible en el editor junto a los precios |
 | Stock 3 (mínimo 3) | Stock 0 |
-| Sin descripción | Descripción encontrada en Google (opcional) |
+| Sin descripción | Descripción y descripción corta generadas con IA (IA Conector), opcionalmente con lo encontrado en Google como contexto |
 
 Todos los productos importados llevan la meta `_hsy_imported = yes`. Si su stock baja hasta el mínimo o por debajo, se pone en 0 automáticamente.
 
@@ -38,9 +38,11 @@ En el menú **Importar productos** del admin:
 |---|---|
 | Productos | Cargar el catálogo, buscar, importar individual / seleccionados / todos. |
 | Conexión | URL del catálogo, correo, contraseña (no se muestra; vacío = conservar), rutas de login y catálogo, «Probar conexión». |
-| Importación | Estado de los nuevos (borrador por defecto), plantilla del nombre, categoría opcional, qué se actualiza en los existentes, imágenes, **stock mínimo** (3 por defecto) y **descripción desde Google** (API key de Serper.dev). |
+| Importación | Estado de los nuevos (borrador por defecto), plantilla del nombre, categoría opcional, qué se actualiza en los existentes, imágenes, **stock mínimo** (3 por defecto) y **descripciones** con IA (plugin IA Conector) y/o Google (API key de Serper.dev). |
 
 ## 📋 Requisitos
+
+- Opcional: plugin **IA Conector** activo con una conexión (Gemini, Groq…) para generar descripciones.
 
 - WordPress 5.8+
 - PHP 7.4+

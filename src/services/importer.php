@@ -12,6 +12,7 @@
  * Un producto ya importado se reconoce por la meta HSY_SOURCE_META y, si no la tiene,
  * por el SKU. Es la única clase que escribe productos. Siempre deja HSY_IMPORTED_META = 'yes'
  * y actualiza el precio mayorista (HSY_WHOLESALE_META), aunque no se actualice nada más.
+ * La descripción y la descripción corta definitivas las escribe HSY_CONTENT (IA / Google), después.
  */
 class HSY_IMPORTER
 {
@@ -90,23 +91,21 @@ class HSY_IMPORTER
         }
         if ($has('attributes')) {
             $product->set_attributes(self::attributes($item['attributes']));
-            $product->set_short_description($item['short_description']);
-        }
-        if ($has('description') && '' === trim(wp_strip_all_tags($product->get_description()))) {
-            $description = self::description($item, $config);
-            if (is_wp_error($description)) {
-                if ('hsy_describe_off' !== $description->get_error_code()) {
-                    $warnings[] = $description->get_error_message();
-                }
-            } elseif ('' !== $description['text']) {
-                $product->set_description(wpautop(esc_html($description['text'])));
-                $product->update_meta_data('_hsy_description_source', $description['source']);
+            // La lista de características es la descripción corta provisional: solo se escribe si está
+            // vacía o si sigue siendo la automática (lo escrito a mano o por la IA no se toca).
+            if (HSY_CONTENT::short_pending($product)) {
+                $product->set_short_description($item['short_description']);
+                $product->update_meta_data(HSY_SHORT_AUTO_META, 'yes');
             }
+        }
+        if ($is_new && '' !== trim(wp_strip_all_tags($item['description']))) {
+            $product->set_description(wpautop(esc_html(wp_strip_all_tags($item['description']))));
         }
 
         // Siempre: marca de importado, precio mayorista y datos del origen.
         $product->update_meta_data(HSY_IMPORTED_META, 'yes');
         $product->update_meta_data(HSY_SOURCE_META, $item['id']);
+        $product->update_meta_data('_hsy_source_name', $item['name']);
         $product->update_meta_data(HSY_WHOLESALE_META, null !== $item['wholesale'] ? (string) $item['wholesale'] : '');
         $product->update_meta_data('_hsy_pvp', null !== $item['pvp'] ? (string) $item['pvp'] : '');
         $product->update_meta_data('_hsy_availability', $item['availability']);
@@ -190,17 +189,6 @@ class HSY_IMPORTER
         ]);
         $name = trim(preg_replace('/\s+/', ' ', $name));
         return '' !== $name ? $name : $item['name'];
-    }
-
-    /**
-     * Descripción del origen o, si no trae, la que se encuentre en Google.
-     */
-    private static function description($item, $config)
-    {
-        if ('' !== trim(wp_strip_all_tags($item['description']))) {
-            return ['text' => wp_strip_all_tags($item['description']), 'source' => 'catalogo'];
-        }
-        return HSY_DESCRIBER::find($item['brand'], $item['name'], $item['sku'], $config);
     }
 
     /**

@@ -25,6 +25,10 @@ $catalog = new HSY_USE_DATA_CATALOG();
         <button type="button" class="button" id="hsy-import-all">Importar todos los visibles</button>
         <span class="hsy-muted"><span id="hsy-total">0</span> productos</span>
     </div>
+    <div class="hsy-content-bar" hidden>
+        <button type="button" class="button" id="hsy-content-pending">Generar descripciones pendientes (<span id="hsy-pending-count">0</span>)</button>
+        <span class="hsy-muted">Productos importados sin descripción o con la descripción corta automática. Se configura en <strong>Importación → Descripciones</strong>.</span>
+    </div>
     <div class="hsy-progress" id="hsy-progress" hidden>
         <div class="hsy-progress__bar"><span></span></div>
         <span class="hsy-progress__text"></span>

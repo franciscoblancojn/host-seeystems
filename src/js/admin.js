@@ -51,7 +51,7 @@ jQuery(function ($) {
 
     function hsy_busy(value) {
         busy = value;
-        $page.find('#hsy-load, #hsy-import-selected, #hsy-import-all, .hsy-import-one').prop('disabled', value);
+        $page.find('#hsy-load, #hsy-import-selected, #hsy-import-all, .hsy-import-one, #hsy-content-pending').prop('disabled', value);
         $('#hsy-spinner').toggleClass('is-active', value);
         if (!value) {
             hsy_update_count();
@@ -155,6 +155,7 @@ jQuery(function ($) {
     function hsy_set_rows(data) {
         rows = data.rows || [];
         $('#hsy-fetched').text(data.fetched_at ? 'Última lectura: ' + data.fetched_at : '');
+        hsy_set_pending(data.pending);
         hsy_render();
     }
 
@@ -209,6 +210,76 @@ jQuery(function ($) {
         }
     }
 
+    // ------------------------------------------------------------------ descripciones pendientes
+
+    function hsy_set_pending(count) {
+        count = parseInt(count, 10) || 0;
+        $('#hsy-pending-count').text(count);
+        $page.find('.hsy-content-bar').prop('hidden', !count);
+        $('#hsy-content-pending').prop('disabled', busy || !count || !D.content_enabled)
+            .attr('title', D.content_enabled ? '' : 'Activa la IA o la búsqueda en Google en Importación.');
+    }
+
+    function hsy_refresh_pending() {
+        hsy_post('pending', {}).then(function (ids) {
+            hsy_set_pending(ids.length);
+        });
+    }
+
+    // Genera descripción y descripción corta de los productos indicados, de a D.content_batch.
+    function hsy_content(productIds, done) {
+        var total = productIds.length;
+        var count = 0;
+        var errors = 0;
+        var last = '';
+        if (!total) {
+            done();
+            return;
+        }
+        hsy_busy(true);
+        hsy_progress(0, total);
+        hsy_message('#hsy-message', 'Generando descripciones de ' + total + ' productos…', 'info');
+
+        function next() {
+            if (!productIds.length) {
+                hsy_busy(false);
+                hsy_message('#hsy-message', 'Descripciones: ' + (total - errors) + ' correctas' +
+                    (errors ? ', ' + errors + ' con error (' + last + ').' : '.'), errors ? 'error' : 'ok');
+                hsy_refresh_pending();
+                done();
+                return;
+            }
+            var batch = productIds.splice(0, D.content_batch || 1);
+            hsy_post('content', { ids: batch }).then(function (results) {
+                for (var i = 0; i < results.length; i++) {
+                    if (!results[i].ok) {
+                        errors++;
+                        last = results[i].message;
+                    }
+                }
+            }, function (error) {
+                errors += batch.length;
+                last = error;
+            }).always(function () {
+                count += batch.length;
+                hsy_progress(count, total);
+                next();
+            });
+        }
+        next();
+    }
+
+    $page.on('click', '#hsy-content-pending', function () {
+        if (busy) {
+            return;
+        }
+        hsy_post('pending', {}).then(function (ids) {
+            if (ids.length && window.confirm('¿Generar las descripciones de ' + ids.length + ' productos? Cada uno hace una llamada a la IA.')) {
+                hsy_content(ids, function () {});
+            }
+        });
+    });
+
     function hsy_import(ids) {
         if (busy || !ids.length) {
             return;
@@ -216,6 +287,7 @@ jQuery(function ($) {
         var total = ids.length;
         var done = 0;
         var errors = 0;
+        var imported = [];
         hsy_busy(true);
         hsy_progress(0, total);
         hsy_message('#hsy-message', 'Importando ' + total + ' productos…', 'info');
@@ -223,8 +295,16 @@ jQuery(function ($) {
         function next() {
             if (!ids.length) {
                 hsy_busy(false);
-                hsy_message('#hsy-message', 'Importación terminada: ' + (total - errors) + ' correctos' +
-                    (errors ? ', ' + errors + ' con error.' : '.'), errors ? 'error' : 'ok');
+                var summary = 'Importación terminada: ' + (total - errors) + ' correctos' + (errors ? ', ' + errors + ' con error.' : '.');
+                hsy_message('#hsy-message', summary, errors ? 'error' : 'ok');
+                // Después de importar, las descripciones pendientes de esos productos (si está activado).
+                if (D.content_auto && imported.length) {
+                    hsy_content(imported, function () {
+                        $('#hsy-message p').text(summary + ' ' + $('#hsy-message p').text());
+                    });
+                } else {
+                    hsy_refresh_pending();
+                }
                 return;
             }
             var batch = ids.splice(0, D.batch || 5);
@@ -232,6 +312,8 @@ jQuery(function ($) {
                 for (var i = 0; i < results.length; i++) {
                     if (!results[i].ok) {
                         errors++;
+                    } else if (results[i].product_id) {
+                        imported.push(results[i].product_id);
                     }
                     hsy_apply_result(results[i]);
                 }
@@ -268,4 +350,11 @@ jQuery(function ($) {
     if ($('#hsy-rows').length) {
         hsy_post('rows', {}).then(hsy_set_rows);
     }
+
+    // Pestaña Importación: mostrar el prompt de ejemplo.
+    $page.on('click', '#hsy-prompt-toggle', function () {
+        $('#hsy-prompt').prop('hidden', function (i, hidden) {
+            return !hidden;
+        });
+    });
 });

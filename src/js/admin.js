@@ -395,6 +395,27 @@ jQuery(function ($) {
         }
     });
 
+    // Conexiones de IA: subir / bajar cambia la prioridad (el orden del formulario es el que se guarda).
+    $page.on('click', '.hsy-move', function () {
+        var $li = $(this).closest('.hsy-connection');
+        if ($(this).data('dir') === 'up') {
+            $li.prev('.hsy-connection').before($li);
+        } else {
+            $li.next('.hsy-connection').after($li);
+        }
+    });
+
+    $page.on('click', '.hsy-ai-resume', function () {
+        var $btn = $(this).prop('disabled', true);
+        hsy_post('ai_resume', { key: $btn.data('key') }).then(function () {
+            $btn.prev('.hsy-badge').remove();
+            $btn.remove();
+        }, function (error) {
+            $btn.prop('disabled', false);
+            window.alert(error);
+        });
+    });
+
     $page.on('click', '#hsy-preview', function () {
         var productId = $('#hsy-preview-product').val();
         if (!productId) {
@@ -410,7 +431,7 @@ jQuery(function ($) {
             prompt_description: $('#hsy-prompt-description').val(),
             prompt_short: $('#hsy-prompt-short').val()
         }).then(function (data) {
-            hsy_message('#hsy-preview-message', 'Vista previa de «' + data.product + '». No se guardó nada.' +
+            hsy_message('#hsy-preview-message', 'Vista previa de «' + data.product + '» con ' + (data.connections || []).join(', ') + '. No se guardó nada.' +
                 (data.web ? ' Información de la web: ' + data.web : '') +
                 (data.warnings && data.warnings.length ? ' (' + data.warnings.join(' · ') + ')' : ''), 'ok');
             // El HTML ya viene limpio del servidor (wp_kses con las etiquetas permitidas).

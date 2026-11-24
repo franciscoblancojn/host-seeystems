@@ -37,6 +37,7 @@ define("HSY_WHOLESALE_META", '_hsy_wholesale_price'); // meta del producto: prec
 define("HSY_SHORT_AUTO_META", '_hsy_short_auto');     // meta del producto: 'yes' si la descripción corta es la lista automática
 define("HSY_BATCH_SIZE", 5);                 // productos por petición al importar (descarga imágenes)
 define("HSY_CONTENT_BATCH", 1);              // productos por petición al generar descripciones (IA lenta)
+define("HSY_AI_COOLDOWN", 15 * 60);          // segundos de pausa de una conexión de IA sin cuota / con límite de uso
 define("HSY_MAX_PAGES", 50);                 // tope de páginas del catálogo por lectura
 define("HSY_REPOSITORY", 'franciscoblancojn/host-seeystems');
 define("HSY_LOG", true);

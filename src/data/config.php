@@ -28,7 +28,7 @@ class HSY_USE_DATA_CONFIG extends HSY_USE_DATA_BASE
         'min_stock' => 3,
         // Descripciones pendientes (HSY_CONTENT): IA del plugin IA Conector y/o Google (Serper.dev).
         'ai_enabled' => 0,
-        'ai_connection' => '',     // key de la conexión en IA Conector
+        'ai_connections' => [],    // keys de conexiones de IA Conector, en orden de prioridad (la 1.ª que responda)
         'ai_prompt_description' => '', // prompt de la descripción ('' = HSY_CONTENT::DEFAULT_PROMPT_DESCRIPTION)
         'ai_prompt_short' => '',   // prompt de la descripción corta ('' = HSY_CONTENT::DEFAULT_PROMPT_SHORT)
         'content_after_import' => 1, // generar lo pendiente justo después de importar
@@ -55,6 +55,11 @@ class HSY_USE_DATA_CONFIG extends HSY_USE_DATA_BASE
     public function get()
     {
         $config = array_merge(self::DEFAULTS, $this->DATA);
+        // Hasta 1.1.0 había una sola conexión (ai_connection): pasa a ser la primera de la lista.
+        if (!$config['ai_connections'] && !empty($this->DATA['ai_connection'])) {
+            $config['ai_connections'] = [(string) $this->DATA['ai_connection']];
+        }
+        $config['ai_connections'] = array_values(array_unique(array_filter(array_map('strval', (array) $config['ai_connections']), 'strlen')));
         // Prompt vacío = el de por defecto (así se restaura vaciando el campo).
         if ('' === trim((string) $config['ai_prompt_description'])) {
             $config['ai_prompt_description'] = HSY_CONTENT::DEFAULT_PROMPT_DESCRIPTION;
@@ -100,6 +105,9 @@ class HSY_USE_DATA_CONFIG extends HSY_USE_DATA_BASE
         $input = (array) $input;
         $saved = new self();
         $current = array_merge(self::DEFAULTS, $saved->DATA); // lo guardado, sin rellenar los prompts por defecto
+        if (!$current['ai_connections'] && !empty($saved->DATA['ai_connection'])) {
+            $current['ai_connections'] = [(string) $saved->DATA['ai_connection']]; // migración desde 1.1.0
+        }
         $out = $current;
         $has = function ($key) use ($input) {
             return array_key_exists($key, $input);
@@ -127,7 +135,8 @@ class HSY_USE_DATA_CONFIG extends HSY_USE_DATA_BASE
             $out['min_stock'] = max(0, (int) ($input['min_stock'] ?? self::DEFAULTS['min_stock']));
             $out['describe'] = empty($input['describe']) ? 0 : 1;
             $out['ai_enabled'] = empty($input['ai_enabled']) ? 0 : 1;
-            $out['ai_connection'] = sanitize_text_field($input['ai_connection'] ?? '');
+            // Orden del formulario = prioridad. Solo las marcadas.
+            $out['ai_connections'] = array_values(array_unique(array_filter(array_map('sanitize_text_field', (array) ($input['ai_connections'] ?? [])), 'strlen')));
             $out['ai_prompt_description'] = self::prompt($input['ai_prompt_description'] ?? '', HSY_CONTENT::DEFAULT_PROMPT_DESCRIPTION);
             $out['ai_prompt_short'] = self::prompt($input['ai_prompt_short'] ?? '', HSY_CONTENT::DEFAULT_PROMPT_SHORT);
             $out['content_after_import'] = empty($input['content_after_import']) ? 0 : 1;

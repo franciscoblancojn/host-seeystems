@@ -4,6 +4,16 @@ Todos los cambios importantes del plugin Host Seeystems. Formato basado en [Keep
 
 > ✍️ Antes de publicar, agrega arriba una sección `## [Sin publicar]` con los cambios. `npm run push-v -- patch|minor|major` la renombra a `## [X.Y.Z] - fecha`, y no publica si esa sección no existe.
 
+## [Sin publicar]
+
+### ✨ Añadido
+- 🔁 **Varias conexiones de IA con respaldo**: en Importación → Descripciones se marcan las conexiones de IA Conector que se pueden usar y se ordenan con ↑ ↓. Se usa la primera; si falla (tokens o límite de uso agotados, modelo inexistente, sin conexión…) se prueba la siguiente hasta que una responda.
+- ⏸️ Una conexión que falla por **cuota o límite de uso** queda en pausa 15 minutos (no se gasta una llamada fallida en cada producto) y se vuelve a probar sola; se ve «En pausa» en la lista, con botón «Reanudar».
+- 📝 El producto guarda qué conexión respondió (`_hsy_content_ai`) y el log, las conexiones saltadas; la vista previa también lo muestra.
+
+### 🔄 Cambiado
+- ⚙️ El ajuste `ai_connection` (una conexión) pasa a `ai_connections` (lista en orden de prioridad). La conexión elegida hasta ahora queda como la primera, sin hacer nada.
+
 ## [1.1.0] - 2026-11-24
 
 ### ✨ Añadido

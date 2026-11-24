@@ -113,18 +113,40 @@ $hsy_preview_products = get_posts([
                 <p class="fwue-message hsy-message error">IA Conector está activo pero no tiene conexiones activas: crea una en su página de configuración.</p>
             <?php endif; ?>
             <label><input type="checkbox" name="hsy[ai_enabled]" value="1" <?php checked($config['ai_enabled'], 1); ?> <?= HSY_CONTENT::ai_available() ? '' : 'disabled' ?>> Generar la descripción y la descripción corta con IA</label>
-            <p>
-                <label for="hsy-ai-connection">Conexión</label>
-                <select id="hsy-ai-connection" name="hsy[ai_connection]">
-                    <option value="">— Elegir —</option>
-                    <?php foreach ($hsy_connections as $key => $label) : ?>
-                        <option value="<?= esc_attr($key) ?>" <?php selected($config['ai_connection'], $key); ?>><?= esc_html($label) ?></option>
-                    <?php endforeach; ?>
-                    <?php if ('' !== $config['ai_connection'] && !isset($hsy_connections[$config['ai_connection']])) : ?>
-                        <option value="<?= esc_attr($config['ai_connection']) ?>" selected><?= esc_html($config['ai_connection'] . ' (no disponible)') ?></option>
-                    <?php endif; ?>
-                </select>
-            </p>
+            <?php
+            // Orden: primero las elegidas (en su prioridad), después el resto de conexiones de IA Conector.
+            $hsy_order = $config['ai_connections'];
+            foreach (array_keys($hsy_connections) as $key) {
+                if (!in_array($key, $hsy_order, true)) {
+                    $hsy_order[] = $key;
+                }
+            }
+            $hsy_paused = HSY_CONTENT::paused_connections($hsy_order);
+            ?>
+            <p><strong>Conexiones, en orden de prioridad</strong></p>
+            <ol class="hsy-connections" id="hsy-connections">
+                <?php foreach ($hsy_order as $key) : ?>
+                    <li class="hsy-connection" data-key="<?= esc_attr($key) ?>">
+                        <label>
+                            <input type="checkbox" name="hsy[ai_connections][]" value="<?= esc_attr($key) ?>" <?php checked(in_array($key, $config['ai_connections'], true)); ?>>
+                            <?= esc_html($hsy_connections[$key] ?? $key . ' (no disponible en IA Conector)') ?>
+                        </label>
+                        <?php if (isset($hsy_paused[$key])) : ?>
+                            <span class="hsy-badge hsy-badge--pending">En pausa por límite de uso (~<?= (int) ceil($hsy_paused[$key] / 60) ?> min)</span>
+                            <button type="button" class="button-link hsy-ai-resume" data-key="<?= esc_attr($key) ?>">Reanudar</button>
+                        <?php endif; ?>
+                        <span class="hsy-connection__move">
+                            <button type="button" class="button button-small hsy-move" data-dir="up" aria-label="Subir">↑</button>
+                            <button type="button" class="button button-small hsy-move" data-dir="down" aria-label="Bajar">↓</button>
+                        </span>
+                    </li>
+                <?php endforeach; ?>
+            </ol>
+            <ul class="hsy-help">
+                <li>Marca las conexiones que se pueden usar y ordénalas con ↑ ↓. Se usa la primera; si falla (tokens o límite de uso agotados, modelo inexistente, sin conexión…) se prueba la siguiente, y así hasta que una responda.</li>
+                <li>Si el error es de <strong>cuota o límite de uso</strong>, esa conexión queda <strong>en pausa <?= (int) (HSY_AI_COOLDOWN / 60) ?> minutos</strong> para no gastar una llamada fallida en cada producto; después se vuelve a probar sola. «Reanudar» la quita de la pausa ya.</li>
+                <li>En el producto queda qué conexión respondió (meta <code>_hsy_content_ai</code>) y en el log, los saltos.</li>
+            </ul>
             <p class="description">Las dos descripciones se generan con una llamada cada una, con los prompts de abajo.</p>
         </td>
     </tr>

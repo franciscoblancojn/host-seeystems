@@ -7,7 +7,8 @@
  * - Pendiente = producto importado sin descripción, o cuya descripción corta sigue siendo la
  *   lista automática de características (meta HSY_SHORT_AUTO_META = 'yes'). Lo escrito a mano
  *   o generado antes nunca se reemplaza.
- * - Con IA (plugin IA Conector, clase IACON_AI) se generan las dos, una llamada por campo, con los
+ * - Con IA (plugin IA Conector, clase IACON_AI) se generan las dos, una llamada por campo, con las
+ *   conexiones de ai_connections en orden de prioridad (si una falla se prueba la siguiente), con los
  *   prompts editables ai_prompt_description y ai_prompt_short (variables en VARIABLES). Si la
  *   búsqueda en Google (HSY_DESCRIBER) está activa, lo encontrado llega en {info_web}.
  * - Sin IA y con Google activo, la descripción es el texto encontrado en Google (como antes).
@@ -62,7 +63,7 @@ class HSY_CONTENT
 
     public static function ai_enabled($config)
     {
-        return !empty($config['ai_enabled']) && '' !== $config['ai_connection'] && self::ai_available();
+        return !empty($config['ai_enabled']) && !empty($config['ai_connections']) && self::ai_available();
     }
 
     public static function is_pending($product)
@@ -248,8 +249,9 @@ Responde solo con el HTML, sin explicaciones ni bloques de código.";
                 $product->update_meta_data(HSY_SHORT_AUTO_META, 'no');
                 $fields[] = 'short_description';
             }
-            $source = 'ia:' . $config['ai_connection'];
-            $product->update_meta_data('_hsy_content_ai', $config['ai_connection']);
+            $warnings = array_merge($warnings, $generated['warnings']);
+            $source = 'ia:' . implode(',', $generated['connections']);
+            $product->update_meta_data('_hsy_content_ai', implode(',', $generated['connections']));
         } elseif ($web && $need_description) {
             $product->set_description(wpautop(esc_html($web['text'])));
             $fields[] = 'description';
@@ -289,7 +291,7 @@ Responde solo con el HTML, sin explicaciones ni bloques de código.";
             return new WP_Error('hsy_preview_product', 'No existe el producto #' . (int) $product_id . '.');
         }
         if (!self::ai_enabled($config)) {
-            return new WP_Error('hsy_preview_ai', 'Activa la IA, elige una conexión y guarda antes de probar.');
+            return new WP_Error('hsy_preview_ai', 'Activa la IA, marca al menos una conexión y guarda antes de probar.');
         }
         $web = self::web($product, $config);
         $vars = self::variables($product, $web['web']);
@@ -298,7 +300,7 @@ Responde solo con el HTML, sin explicaciones ni bloques de código.";
         if (is_wp_error($description)) {
             return $description;
         }
-        $vars['descripcion'] = self::text($description);
+        $vars['descripcion'] = self::text($description['html']);
         $prompt_short = self::render($config['ai_prompt_short'], $vars);
         $short = self::ask($prompt_short, $config);
         if (is_wp_error($short)) {
@@ -307,11 +309,12 @@ Responde solo con el HTML, sin explicaciones ni bloques de código.";
         return [
             'product' => $product->get_name(),
             'prompt_description' => $prompt_description,
-            'description' => $description,
+            'description' => $description['html'],
             'prompt_short' => $prompt_short,
-            'short_description' => $short,
+            'short_description' => $short['html'],
+            'connections' => array_values(array_unique([$description['connection'], $short['connection']])),
             'web' => $web['web'] ? $web['web']['source'] : '',
-            'warnings' => $web['warnings'],
+            'warnings' => array_values(array_unique(array_merge($web['warnings'], $description['warnings'], $short['warnings']))),
         ];
     }
 
@@ -386,45 +389,114 @@ Responde solo con el HTML, sin explicaciones ni bloques de código.";
 
     /**
      * Una llamada por campo: primero la descripción y después la corta (que puede usar {descripcion}).
+     * Devuelve ['description', 'short_description', 'connections' => usadas, 'warnings' => saltos] o WP_Error.
      */
     private static function generate($product, $web, $config, $need_description, $need_short)
     {
         $vars = self::variables($product, $web);
-        $out = ['description' => '', 'short_description' => ''];
-        if ($need_description) {
-            $out['description'] = self::ask(self::render($config['ai_prompt_description'], $vars), $config);
-            if (is_wp_error($out['description'])) {
-                return $out['description'];
+        $out = ['description' => '', 'short_description' => '', 'connections' => [], 'warnings' => []];
+        foreach (['description' => $need_description, 'short_description' => $need_short] as $field => $need) {
+            if (!$need) {
+                continue;
             }
-            $vars['descripcion'] = self::text($out['description']);
-        }
-        if ($need_short) {
-            $out['short_description'] = self::ask(self::render($config['ai_prompt_short'], $vars), $config);
-            if (is_wp_error($out['short_description'])) {
-                return $out['short_description'];
+            $prompt = 'description' === $field ? $config['ai_prompt_description'] : $config['ai_prompt_short'];
+            $answer = self::ask(self::render($prompt, $vars), $config);
+            if (is_wp_error($answer)) {
+                return $answer;
+            }
+            $out[$field] = $answer['html'];
+            $out['connections'][] = $answer['connection'];
+            $out['warnings'] = array_merge($out['warnings'], $answer['warnings']);
+            if ('description' === $field) {
+                $vars['descripcion'] = self::text($answer['html']);
             }
         }
+        $out['connections'] = array_values(array_unique($out['connections']));
+        $out['warnings'] = array_values(array_unique($out['warnings']));
         return $out;
     }
 
     /**
-     * Envía un prompt a la conexión elegida y devuelve el HTML limpio, o WP_Error.
+     * Envía el prompt a las conexiones en orden de prioridad hasta que una responda.
+     *
+     * Si una falla (tokens o límite de uso agotados, modelo inexistente, red…) se prueba la siguiente.
+     * Si el error es de cuota / límite, la conexión queda en pausa HSY_AI_COOLDOWN segundos
+     * (transient) para no gastar una llamada fallida en cada producto.
+     *
+     * Devuelve ['html', 'connection', 'warnings' => conexiones saltadas] o WP_Error si fallaron todas.
      */
     private static function ask($prompt, $config)
     {
-        $ai = IACON_AI::get($config['ai_connection']);
-        if (!$ai) {
-            return new WP_Error('hsy_ai_connection', 'La conexión de IA «' . $config['ai_connection'] . '» no existe o está desactivada en IA Conector.');
+        $errors = [];
+        $skipped = [];
+        foreach ((array) $config['ai_connections'] as $key) {
+            if (get_transient(self::cooldown_key($key))) {
+                $skipped[] = $key . ': en pausa por límite de uso';
+                continue;
+            }
+            $ai = IACON_AI::get($key);
+            if (!$ai) {
+                $errors[] = $key . ': no existe o está desactivada en IA Conector';
+                continue;
+            }
+            $response = $ai->sendPrompt($prompt);
+            if (!is_array($response) || 'ok' !== ($response['status'] ?? '')) {
+                $message = is_array($response) ? (string) ($response['message'] ?? 'error') : 'respuesta vacía';
+                if (self::is_limit_error($message)) {
+                    set_transient(self::cooldown_key($key), $message, HSY_AI_COOLDOWN);
+                    HSY_LOG_SERVICE::add('ai_limit', ['connection' => $key, 'message' => $message, 'pause' => HSY_AI_COOLDOWN]);
+                }
+                $errors[] = $key . ': ' . $message;
+                continue;
+            }
+            $html = self::html((string) $response['data']);
+            if ('' === $html) {
+                $errors[] = $key . ': respuesta vacía';
+                continue;
+            }
+            $warnings = [];
+            if ($errors || $skipped) {
+                $warnings[] = 'Respondió ' . $key . ' (falló: ' . implode(' · ', array_merge($skipped, $errors)) . ')';
+            }
+            return ['html' => $html, 'connection' => $key, 'warnings' => $warnings];
         }
-        $response = $ai->sendPrompt($prompt);
-        if (!is_array($response) || 'ok' !== ($response['status'] ?? '')) {
-            return new WP_Error('hsy_ai', 'IA: ' . (is_array($response) ? ($response['message'] ?? 'error') : 'respuesta vacía'));
+        if (!$errors && $skipped) {
+            return new WP_Error('hsy_ai_paused', 'Todas las conexiones de IA están en pausa por límite de uso; se reintentan solas en unos minutos.');
         }
-        $html = self::html((string) $response['data']);
-        if ('' === $html) {
-            return new WP_Error('hsy_ai_empty', 'La IA devolvió una respuesta vacía.');
+        return new WP_Error('hsy_ai', 'Ninguna conexión de IA respondió. ' . implode(' · ', array_merge($skipped, $errors)));
+    }
+
+    /**
+     * ¿El error es por tokens, cuota o límite de uso? (textos de Gemini, Groq, OpenAI…)
+     */
+    public static function is_limit_error($message)
+    {
+        return (bool) preg_match('/quota|rate.?limit|exhaust|too many requests|\b429\b|limit (reached|exceeded)|tokens? per|insufficient|billing|credit/i', (string) $message);
+    }
+
+    /**
+     * Conexiones en pausa: [key => segundos restantes aprox.] (para mostrarlo en ajustes).
+     */
+    public static function paused_connections($keys)
+    {
+        $paused = [];
+        foreach ((array) $keys as $key) {
+            if (get_transient(self::cooldown_key($key))) {
+                $timeout = (int) get_option('_transient_timeout_' . self::cooldown_key($key));
+                $paused[$key] = $timeout ? max(0, $timeout - time()) : HSY_AI_COOLDOWN;
+            }
         }
-        return $html;
+        return $paused;
+    }
+
+    public static function resume_connection($key)
+    {
+        delete_transient(self::cooldown_key($key));
+    }
+
+    private static function cooldown_key($key)
+    {
+        return 'hsy_ai_pause_' . md5((string) $key);
     }
 
     /**

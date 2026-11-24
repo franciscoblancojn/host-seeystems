@@ -207,3 +207,21 @@
 .hsy-page [hidden][hidden] {
 	display: none;
 }
+
+.hsy-page .hsy-connections {
+	max-width: 620px;
+	margin: 6px 0 8px 20px;
+}
+
+.hsy-page .hsy-connection {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+	padding: 4px 0;
+	border-bottom: 1px solid #f0f0f1;
+}
+
+.hsy-page .hsy-connection__move {
+	margin-left: auto;
+}

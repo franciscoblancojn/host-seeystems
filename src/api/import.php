@@ -17,6 +17,7 @@ class HSY_API_IMPORT
         add_action('wp_ajax_hsy_pending', [self::class, 'pending']);
         add_action('wp_ajax_hsy_content', [self::class, 'content']);
         add_action('wp_ajax_hsy_preview', [self::class, 'preview']);
+        add_action('wp_ajax_hsy_ai_resume', [self::class, 'ai_resume']);
     }
 
     private static function guard()
@@ -70,6 +71,16 @@ class HSY_API_IMPORT
     {
         self::guard();
         wp_send_json_success(HSY_CONTENT::pending_ids());
+    }
+
+    /** Quita la pausa por límite de uso de una conexión de IA. */
+    public static function ai_resume()
+    {
+        self::guard();
+        $key = sanitize_text_field(wp_unslash($_POST['key'] ?? ''));
+        HSY_CONTENT::resume_connection($key);
+        HSY_LOG_SERVICE::add('ai_resume', ['connection' => $key]);
+        wp_send_json_success('Conexión reanudada.');
     }
 
     /** Prueba los prompts del formulario (sin guardar) con un producto. No escribe nada. */

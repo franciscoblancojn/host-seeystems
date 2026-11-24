@@ -29,7 +29,8 @@ class HSY_USE_DATA_CONFIG extends HSY_USE_DATA_BASE
         // Descripciones pendientes (HSY_CONTENT): IA del plugin IA Conector y/o Google (Serper.dev).
         'ai_enabled' => 0,
         'ai_connection' => '',     // key de la conexión en IA Conector
-        'ai_instructions' => '',   // instrucciones extra para la IA (tono, largo…)
+        'ai_prompt_description' => '', // prompt de la descripción ('' = HSY_CONTENT::DEFAULT_PROMPT_DESCRIPTION)
+        'ai_prompt_short' => '',   // prompt de la descripción corta ('' = HSY_CONTENT::DEFAULT_PROMPT_SHORT)
         'content_after_import' => 1, // generar lo pendiente justo después de importar
         'describe' => 0,           // buscar en Google (contexto para la IA o descripción directa sin IA)
         'serper_key' => '',
@@ -48,9 +49,32 @@ class HSY_USE_DATA_CONFIG extends HSY_USE_DATA_BASE
     /** Ajustes secretos: nunca se imprimen; vacío en el formulario = conservar. */
     const SECRETS = ['password', 'serper_key'];
 
+    /** Largo máximo de cada prompt. */
+    const PROMPT_MAX = 8000;
+
     public function get()
     {
-        return array_merge(self::DEFAULTS, $this->DATA);
+        $config = array_merge(self::DEFAULTS, $this->DATA);
+        // Prompt vacío = el de por defecto (así se restaura vaciando el campo).
+        if ('' === trim((string) $config['ai_prompt_description'])) {
+            $config['ai_prompt_description'] = HSY_CONTENT::DEFAULT_PROMPT_DESCRIPTION;
+        }
+        if ('' === trim((string) $config['ai_prompt_short'])) {
+            $config['ai_prompt_short'] = HSY_CONTENT::DEFAULT_PROMPT_SHORT;
+        }
+        return $config;
+    }
+
+    /**
+     * Prompt del formulario: texto libre (puede llevar etiquetas como <p> como instrucción), sin
+     * caracteres de control. Igual al de por defecto = se guarda vacío, para seguir sus mejoras.
+     */
+    public static function prompt($value, $default)
+    {
+        $value = str_replace("\r\n", "\n", wp_check_invalid_utf8((string) $value));
+        $value = trim(preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', $value));
+        $value = mb_substr($value, 0, self::PROMPT_MAX);
+        return $value === trim($default) ? '' : $value;
     }
 
     public function set($data)
@@ -74,7 +98,8 @@ class HSY_USE_DATA_CONFIG extends HSY_USE_DATA_BASE
     public static function sanitize($input)
     {
         $input = (array) $input;
-        $current = (new self())->get();
+        $saved = new self();
+        $current = array_merge(self::DEFAULTS, $saved->DATA); // lo guardado, sin rellenar los prompts por defecto
         $out = $current;
         $has = function ($key) use ($input) {
             return array_key_exists($key, $input);
@@ -103,7 +128,8 @@ class HSY_USE_DATA_CONFIG extends HSY_USE_DATA_BASE
             $out['describe'] = empty($input['describe']) ? 0 : 1;
             $out['ai_enabled'] = empty($input['ai_enabled']) ? 0 : 1;
             $out['ai_connection'] = sanitize_text_field($input['ai_connection'] ?? '');
-            $out['ai_instructions'] = sanitize_textarea_field($input['ai_instructions'] ?? '');
+            $out['ai_prompt_description'] = self::prompt($input['ai_prompt_description'] ?? '', HSY_CONTENT::DEFAULT_PROMPT_DESCRIPTION);
+            $out['ai_prompt_short'] = self::prompt($input['ai_prompt_short'] ?? '', HSY_CONTENT::DEFAULT_PROMPT_SHORT);
             $out['content_after_import'] = empty($input['content_after_import']) ? 0 : 1;
         }
 

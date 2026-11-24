@@ -82,15 +82,16 @@
 <h2>Descripciones</h2>
 <?php
 $hsy_connections = HSY_CONTENT::ai_connections();
-$hsy_example = HSY_CONTENT::prompt([
-    'nombre' => 'LEILA SET',
-    'marca' => 'Armani Exchange',
-    'referencia' => 'AX7186SET',
-    'género' => 'DAMA',
-    'correa' => 'Acero Dorado',
-    'caja' => 'Acero, Dorado',
-    'tamaño' => '27 mm',
-], null, $config['ai_instructions']);
+$hsy_preview_products = get_posts([
+    'post_type' => 'product',
+    'post_status' => 'any',
+    'meta_key' => HSY_IMPORTED_META,
+    'meta_value' => 'yes',
+    'posts_per_page' => 200,
+    'orderby' => 'title',
+    'order' => 'ASC',
+    'no_found_rows' => true,
+]);
 ?>
 <table class="form-table" role="presentation">
     <tr>
@@ -124,13 +125,54 @@ $hsy_example = HSY_CONTENT::prompt([
                     <?php endif; ?>
                 </select>
             </p>
-            <p>
-                <label for="hsy-ai-instructions">Instrucciones adicionales</label><br>
-                <textarea id="hsy-ai-instructions" name="hsy[ai_instructions]" rows="3" class="large-text" placeholder="P. ej.: Menciona que es ideal para regalo. Usa un tono elegante."><?= esc_textarea($config['ai_instructions']) ?></textarea>
-            </p>
-            <p class="description">La IA recibe el nombre, la marca, la referencia y las características del producto, y lo encontrado en Google si está activo. Tiene prohibido inventar datos técnicos y mencionar precios, stock o tiendas.
-                <button type="button" class="button-link" id="hsy-prompt-toggle">Ver el prompt de ejemplo</button></p>
-            <pre class="hsy-prompt" id="hsy-prompt" hidden><?= esc_html($hsy_example) ?></pre>
+            <p class="description">Las dos descripciones se generan con una llamada cada una, con los prompts de abajo.</p>
+        </td>
+    </tr>
+    <tr>
+        <th scope="row">Prompts</th>
+        <td>
+            <details class="hsy-vars">
+                <summary>Variables disponibles</summary>
+                <table class="widefat striped">
+                    <tbody>
+                        <?php foreach (HSY_CONTENT::VARIABLES as $key => $label) : ?>
+                            <tr>
+                                <td><code class="hsy-var" title="Clic para insertar">{<?= esc_html($key) ?>}</code></td>
+                                <td><?= esc_html($label) ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+                <p class="description">Clic en una variable para insertarla en el último prompt donde estabas escribiendo. Las variables vacías quedan como texto vacío.</p>
+            </details>
+
+            <p><label for="hsy-prompt-description"><strong>Prompt de la descripción</strong></label></p>
+            <textarea id="hsy-prompt-description" name="hsy[ai_prompt_description]" rows="14" class="large-text code hsy-prompt-input"
+                data-default="<?= esc_attr(HSY_CONTENT::DEFAULT_PROMPT_DESCRIPTION) ?>"><?= esc_textarea($config['ai_prompt_description']) ?></textarea>
+            <p><button type="button" class="button-link hsy-prompt-reset" data-target="#hsy-prompt-description">Restaurar el prompt por defecto</button></p>
+
+            <p><label for="hsy-prompt-short"><strong>Prompt de la descripción corta</strong></label></p>
+            <textarea id="hsy-prompt-short" name="hsy[ai_prompt_short]" rows="10" class="large-text code hsy-prompt-input"
+                data-default="<?= esc_attr(HSY_CONTENT::DEFAULT_PROMPT_SHORT) ?>"><?= esc_textarea($config['ai_prompt_short']) ?></textarea>
+            <p><button type="button" class="button-link hsy-prompt-reset" data-target="#hsy-prompt-short">Restaurar el prompt por defecto</button></p>
+
+            <p class="description">La IA debe responder solo con el HTML del campo (se permiten &lt;p&gt;, &lt;strong&gt;, &lt;em&gt;, &lt;ul&gt;/&lt;ol&gt;/&lt;li&gt;, &lt;h3&gt;/&lt;h4&gt;, &lt;br&gt;; el resto se quita). La corta se genera después de la descripción, así que <code>{descripcion}</code> trae la recién generada. Un prompt vacío vuelve al de por defecto.</p>
+        </td>
+    </tr>
+    <tr>
+        <th scope="row"><label for="hsy-preview-product">Probar los prompts</label></th>
+        <td>
+            <select id="hsy-preview-product">
+                <option value="">— Producto importado —</option>
+                <?php foreach ($hsy_preview_products as $hsy_p) : ?>
+                    <option value="<?= (int) $hsy_p->ID ?>"><?= esc_html($hsy_p->post_title . ' (#' . $hsy_p->ID . ')') ?></option>
+                <?php endforeach; ?>
+            </select>
+            <button type="button" class="button" id="hsy-preview">Probar</button>
+            <span class="spinner" id="hsy-preview-spinner"></span>
+            <p class="description">Genera con los prompts tal como están en el formulario (sin guardar) y con la conexión guardada. <strong>No cambia el producto.</strong></p>
+            <div id="hsy-preview-message"></div>
+            <div class="hsy-preview" id="hsy-preview-result" hidden></div>
         </td>
     </tr>
     <tr>

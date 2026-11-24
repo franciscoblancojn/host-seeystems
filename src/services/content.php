@@ -7,8 +7,9 @@
  * - Pendiente = producto importado sin descripción, o cuya descripción corta sigue siendo la
  *   lista automática de características (meta HSY_SHORT_AUTO_META = 'yes'). Lo escrito a mano
  *   o generado antes nunca se reemplaza.
- * - Con IA (plugin IA Conector, clase IACON_AI) se generan las dos. Si la búsqueda en Google
- *   (HSY_DESCRIBER) está activa, lo encontrado se pasa a la IA como contexto.
+ * - Con IA (plugin IA Conector, clase IACON_AI) se generan las dos, una llamada por campo, con los
+ *   prompts editables ai_prompt_description y ai_prompt_short (variables en VARIABLES). Si la
+ *   búsqueda en Google (HSY_DESCRIBER) está activa, lo encontrado llega en {info_web}.
  * - Sin IA y con Google activo, la descripción es el texto encontrado en Google (como antes).
  *
  * Se ejecuta por AJAX de a un producto (HSY_API_IMPORT::content): las llamadas a la IA tardan.
@@ -112,6 +113,60 @@ class HSY_CONTENT
     }
 
     /**
+     * Variables de los prompts: {clave} => qué contiene.
+     */
+    const VARIABLES = [
+        'nombre' => 'Nombre del producto en el catálogo (LEILA SET)',
+        'nombre_tienda' => 'Nombre del producto en la tienda (según la plantilla del nombre)',
+        'marca' => 'Marca (Armani Exchange)',
+        'referencia' => 'Referencia / SKU (AX7186SET)',
+        'genero' => 'Género (DAMA)',
+        'correa' => 'Correa (Acero Dorado)',
+        'caja' => 'Caja (Acero, Dorado)',
+        'tamano' => 'Tamaño (27 mm)',
+        'resistencia_agua' => 'Resistencia al agua',
+        'caracteristicas' => 'Todas las características, una por línea («- Género: DAMA»)',
+        'info_web' => 'Texto encontrado en Google con la referencia (vacío si no hay o si la búsqueda está apagada)',
+        'fuente_web' => 'URL de donde salió {info_web}',
+        'descripcion' => 'Descripción del producto (la recién generada o la que ya tenía; útil en el prompt de la corta)',
+    ];
+
+    const DEFAULT_PROMPT_DESCRIPTION = "Eres redactor de fichas de producto para una tienda online en español.
+Escribe la descripción del producto {marca} {nombre} (referencia {referencia}).
+
+Datos del producto (fuente fiable):
+- Nombre: {nombre}
+- Marca: {marca}
+{caracteristicas}
+
+Información encontrada en la web (puede ser de otra tienda; si está vacía, ignórala; úsala solo como referencia y reescríbela, no la copies):
+{info_web}
+
+Reglas:
+- No inventes características técnicas que no estén en los datos o en la información de la web (movimiento, materiales, resistencia, garantía…).
+- No menciones precios, descuentos, stock, envíos ni el nombre de ninguna tienda.
+- Español neutro, tono comercial y claro, sin exageraciones ni emojis.
+- Formato: 2 o 3 párrafos en HTML con <p>; puedes usar <strong> y una lista <ul><li> con las características.
+
+Responde solo con el HTML de la descripción, sin explicaciones ni bloques de código.";
+
+    const DEFAULT_PROMPT_SHORT = "Eres redactor de fichas de producto para una tienda online en español.
+Escribe la descripción corta del producto {marca} {nombre} (referencia {referencia}).
+
+Datos del producto:
+{caracteristicas}
+
+Descripción completa del producto (resúmela si existe):
+{descripcion}
+
+Reglas:
+- 1 o 2 frases, máximo 300 caracteres, en un solo <p>.
+- No inventes datos ni menciones precios, stock ni tiendas.
+- Sin emojis.
+
+Responde solo con el HTML, sin explicaciones ni bloques de código.";
+
+    /**
      * Completa lo pendiente de un producto. Devuelve ['fields' => [...], 'source' => ..., 'warnings' => [...]] o WP_Error.
      */
     public static function fill($product_id, $config = null)
@@ -130,23 +185,14 @@ class HSY_CONTENT
 
         $need_description = '' === trim(wp_strip_all_tags($product->get_description()));
         $need_short = self::short_pending($product);
-        $data = self::product_data($product);
-        $warnings = [];
-
-        // Contexto de Google (opcional).
-        $web = null;
-        if (HSY_DESCRIBER::enabled($config)) {
-            $web = HSY_DESCRIBER::find($data['marca'], $data['nombre'], $data['referencia'], $config);
-            if (is_wp_error($web)) {
-                $warnings[] = $web->get_error_message();
-                $web = null;
-            }
-        }
+        $web = self::web($product, $config);
+        $warnings = $web['warnings'];
+        $web = $web['web'];
 
         $fields = [];
         $source = '';
         if (self::ai_enabled($config)) {
-            $generated = self::generate($data, $web, $config);
+            $generated = self::generate($product, $web, $config, $need_description, $need_short);
             if (is_wp_error($generated)) {
                 HSY_LOG_SERVICE::add('content_error', ['product_id' => $product->get_id(), 'message' => $generated->get_error_message()]);
                 return $generated;
@@ -189,100 +235,177 @@ class HSY_CONTENT
     }
 
     /**
-     * Prompt para la IA (se puede ver en la pestaña Importación).
+     * Prueba de los prompts (los del formulario, sin guardar) con un producto: no escribe nada.
+     * Devuelve prompts finales y textos generados, o WP_Error.
      */
-    public static function prompt($data, $web, $instructions)
+    public static function preview($product_id, $prompts, $config = null)
     {
+        $config = $config ?: (new HSY_USE_DATA_CONFIG())->get();
+        $config = array_merge($config, array_filter($prompts, 'strlen'));
+        $product = wc_get_product($product_id);
+        if (!$product) {
+            return new WP_Error('hsy_preview_product', 'No existe el producto #' . (int) $product_id . '.');
+        }
+        if (!self::ai_enabled($config)) {
+            return new WP_Error('hsy_preview_ai', 'Activa la IA, elige una conexión y guarda antes de probar.');
+        }
+        $web = self::web($product, $config);
+        $vars = self::variables($product, $web['web']);
+        $prompt_description = self::render($config['ai_prompt_description'], $vars);
+        $description = self::ask($prompt_description, $config);
+        if (is_wp_error($description)) {
+            return $description;
+        }
+        $vars['descripcion'] = self::text($description);
+        $prompt_short = self::render($config['ai_prompt_short'], $vars);
+        $short = self::ask($prompt_short, $config);
+        if (is_wp_error($short)) {
+            return $short;
+        }
+        return [
+            'product' => $product->get_name(),
+            'prompt_description' => $prompt_description,
+            'description' => $description,
+            'prompt_short' => $prompt_short,
+            'short_description' => $short,
+            'web' => $web['web'] ? $web['web']['source'] : '',
+            'warnings' => $web['warnings'],
+        ];
+    }
+
+    /**
+     * Valores de las variables de los prompts para un producto.
+     */
+    public static function variables($product, $web = null, $description = null)
+    {
+        $brands = taxonomy_exists('product_brand') ? wp_get_post_terms($product->get_id(), 'product_brand', ['fields' => 'names']) : [];
+        $attrs = [];
         $lines = [];
-        foreach ($data as $key => $value) {
-            if ('' !== (string) $value) {
-                $lines[] = '- ' . $key . ': ' . $value;
+        foreach ($product->get_attributes() as $attribute) {
+            if ($attribute instanceof WC_Product_Attribute && !$attribute->is_taxonomy()) {
+                $value = implode(', ', $attribute->get_options());
+                $attrs[sanitize_title($attribute->get_name())] = $value;
+                $lines[] = '- ' . $attribute->get_name() . ': ' . $value;
             }
         }
-        $prompt = "Eres redactor de fichas de producto para una tienda online en español (Colombia).\n"
-            . "Escribe la descripción y la descripción corta de este producto.\n\n"
-            . "DATOS DEL PRODUCTO (fuente fiable):\n" . implode("\n", $lines) . "\n";
-        if ($web) {
-            $prompt .= "\nINFORMACIÓN ENCONTRADA EN LA WEB (puede ser de otra tienda; úsala solo si coincide con la referencia y reescríbela, no la copies):\n"
-                . $web['text'] . "\n";
+        // Nombre del catálogo: meta (productos importados desde 1.1) o el catálogo guardado (anteriores).
+        $source_name = (string) $product->get_meta('_hsy_source_name');
+        if ('' === $source_name) {
+            $item = (new HSY_USE_DATA_CATALOG())->item($product->get_meta(HSY_SOURCE_META));
+            $source_name = $item ? (string) $item['name'] : '';
         }
-        $prompt .= "\nREGLAS:\n"
-            . "- No inventes características técnicas que no estén en los datos o en la información de la web (movimiento, materiales, resistencia, garantía…).\n"
-            . "- No menciones precios, descuentos, stock, envíos ni el nombre de ninguna tienda.\n"
-            . "- Español neutro, tono comercial y claro, sin exageraciones ni emojis.\n"
-            . "- descripcion: 2 o 3 párrafos en HTML (<p>, puedes usar <strong> y una lista <ul><li> de características).\n"
-            . "- descripcion_corta: 1 o 2 frases en un solo <p>, máximo 300 caracteres.\n";
-        if ('' !== trim((string) $instructions)) {
-            $prompt .= "- " . trim($instructions) . "\n";
+        $current = null === $description ? $product->get_description() : $description;
+
+        return [
+            'nombre' => '' !== $source_name ? $source_name : $product->get_name(),
+            'nombre_tienda' => $product->get_name(),
+            'marca' => is_array($brands) && $brands ? implode(', ', $brands) : '',
+            'referencia' => $product->get_sku(),
+            'genero' => $attrs['genero'] ?? '',
+            'correa' => $attrs['correa'] ?? '',
+            'caja' => $attrs['caja'] ?? '',
+            'tamano' => $attrs['tamano'] ?? '',
+            'resistencia_agua' => $attrs['resistencia-al-agua'] ?? '',
+            'caracteristicas' => implode("\n", $lines),
+            'info_web' => $web ? $web['text'] : '',
+            'fuente_web' => $web ? $web['source'] : '',
+            'descripcion' => self::text($current),
+        ];
+    }
+
+    /**
+     * Sustituye {variable} por su valor. Las variables desconocidas se dejan tal cual.
+     */
+    public static function render($template, $vars)
+    {
+        $map = [];
+        foreach ($vars as $key => $value) {
+            $map['{' . $key . '}'] = (string) $value;
         }
-        $prompt .= "\nResponde SOLO con un JSON válido, sin texto antes ni después:\n"
-            . '{"descripcion": "<p>…</p>", "descripcion_corta": "<p>…</p>"}';
-        return $prompt;
+        return trim(strtr((string) $template, $map));
     }
 
     // ------------------------------------------------------------------ internos
 
-    private static function generate($data, $web, $config)
+    /**
+     * Búsqueda en Google (opcional). Devuelve ['web' => ['text','source']|null, 'warnings' => []].
+     */
+    private static function web($product, $config)
+    {
+        if (!HSY_DESCRIBER::enabled($config)) {
+            return ['web' => null, 'warnings' => []];
+        }
+        $vars = self::variables($product);
+        $web = HSY_DESCRIBER::find($vars['marca'], $vars['nombre'], $vars['referencia'], $config);
+        return is_wp_error($web)
+            ? ['web' => null, 'warnings' => [$web->get_error_message()]]
+            : ['web' => $web, 'warnings' => []];
+    }
+
+    /**
+     * Una llamada por campo: primero la descripción y después la corta (que puede usar {descripcion}).
+     */
+    private static function generate($product, $web, $config, $need_description, $need_short)
+    {
+        $vars = self::variables($product, $web);
+        $out = ['description' => '', 'short_description' => ''];
+        if ($need_description) {
+            $out['description'] = self::ask(self::render($config['ai_prompt_description'], $vars), $config);
+            if (is_wp_error($out['description'])) {
+                return $out['description'];
+            }
+            $vars['descripcion'] = self::text($out['description']);
+        }
+        if ($need_short) {
+            $out['short_description'] = self::ask(self::render($config['ai_prompt_short'], $vars), $config);
+            if (is_wp_error($out['short_description'])) {
+                return $out['short_description'];
+            }
+        }
+        return $out;
+    }
+
+    /**
+     * Envía un prompt a la conexión elegida y devuelve el HTML limpio, o WP_Error.
+     */
+    private static function ask($prompt, $config)
     {
         $ai = IACON_AI::get($config['ai_connection']);
         if (!$ai) {
             return new WP_Error('hsy_ai_connection', 'La conexión de IA «' . $config['ai_connection'] . '» no existe o está desactivada en IA Conector.');
         }
-        $response = $ai->sendPrompt(self::prompt($data, $web, $config['ai_instructions']));
+        $response = $ai->sendPrompt($prompt);
         if (!is_array($response) || 'ok' !== ($response['status'] ?? '')) {
             return new WP_Error('hsy_ai', 'IA: ' . (is_array($response) ? ($response['message'] ?? 'error') : 'respuesta vacía'));
         }
-        $json = self::parse_json((string) $response['data']);
-        if (!$json) {
-            return new WP_Error('hsy_ai_json', 'La IA no devolvió un JSON válido.');
-        }
-        return [
-            'description' => self::html($json['descripcion'] ?? ''),
-            'short_description' => self::html($json['descripcion_corta'] ?? ''),
-        ];
-    }
-
-    /**
-     * JSON de la respuesta, aunque venga envuelto en ```json … ``` o con texto alrededor.
-     */
-    private static function parse_json($text)
-    {
-        $text = preg_replace('/^\s*```(?:json)?\s*|\s*```\s*$/i', '', trim($text));
-        $start = strpos($text, '{');
-        $end = strrpos($text, '}');
-        if (false === $start || false === $end || $end <= $start) {
-            return null;
-        }
-        $data = json_decode(substr($text, $start, $end - $start + 1), true);
-        return is_array($data) ? $data : null;
-    }
-
-    private static function html($html)
-    {
-        $html = trim(wp_kses((string) $html, self::ALLOWED_TAGS));
-        if ('' !== $html && false === strpos($html, '<p') && false === strpos($html, '<ul')) {
-            $html = wpautop($html);
+        $html = self::html((string) $response['data']);
+        if ('' === $html) {
+            return new WP_Error('hsy_ai_empty', 'La IA devolvió una respuesta vacía.');
         }
         return $html;
     }
 
     /**
-     * Datos del producto tal como están en la tienda (nombre del catálogo, marca, características).
+     * HTML → texto para las variables: un párrafo / elemento de lista por línea.
      */
-    private static function product_data($product)
+    private static function text($html)
     {
-        $brands = taxonomy_exists('product_brand') ? wp_get_post_terms($product->get_id(), 'product_brand', ['fields' => 'names']) : [];
-        $data = [
-            'nombre' => (string) $product->get_meta('_hsy_source_name') ?: $product->get_name(),
-            'nombre en la tienda' => $product->get_name(),
-            'marca' => is_array($brands) && $brands ? implode(', ', $brands) : '',
-            'referencia' => $product->get_sku(),
-        ];
-        foreach ($product->get_attributes() as $attribute) {
-            if ($attribute instanceof WC_Product_Attribute && !$attribute->is_taxonomy()) {
-                $data[mb_strtolower($attribute->get_name(), 'UTF-8')] = implode(', ', $attribute->get_options());
-            }
+        $html = preg_replace('#<br\s*/?>|</(p|li|h[1-6]|ul|ol)>#i', "\n", (string) $html);
+        $html = preg_replace('#<li[^>]*>#i', '- ', $html);
+        $text = html_entity_decode(wp_strip_all_tags($html), ENT_QUOTES, 'UTF-8');
+        return trim(preg_replace("/\n\s*\n+/", "\n", preg_replace('/[ \t]+/', ' ', $text)));
+    }
+
+    /**
+     * Limpia la respuesta: quita bloques ```html … ```, deja solo ALLOWED_TAGS y añade <p> si es texto plano.
+     */
+    private static function html($text)
+    {
+        $text = preg_replace('/^\s*```[a-z]*\s*|\s*```\s*$/i', '', trim($text));
+        $html = trim(wp_kses($text, self::ALLOWED_TAGS));
+        if ('' !== $html && false === strpos($html, '<p') && false === strpos($html, '<ul')) {
+            $html = wpautop($html);
         }
-        return $data;
+        return $html;
     }
 }

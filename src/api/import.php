@@ -16,6 +16,7 @@ class HSY_API_IMPORT
         add_action('wp_ajax_hsy_import', [self::class, 'import']);
         add_action('wp_ajax_hsy_pending', [self::class, 'pending']);
         add_action('wp_ajax_hsy_content', [self::class, 'content']);
+        add_action('wp_ajax_hsy_preview', [self::class, 'preview']);
     }
 
     private static function guard()
@@ -69,6 +70,23 @@ class HSY_API_IMPORT
     {
         self::guard();
         wp_send_json_success(HSY_CONTENT::pending_ids());
+    }
+
+    /** Prueba los prompts del formulario (sin guardar) con un producto. No escribe nada. */
+    public static function preview()
+    {
+        self::guard();
+        if (function_exists('set_time_limit')) {
+            @set_time_limit(180);
+        }
+        $result = HSY_CONTENT::preview(absint($_POST['product_id'] ?? 0), [
+            'ai_prompt_description' => HSY_USE_DATA_CONFIG::prompt(wp_unslash($_POST['prompt_description'] ?? ''), ''),
+            'ai_prompt_short' => HSY_USE_DATA_CONFIG::prompt(wp_unslash($_POST['prompt_short'] ?? ''), ''),
+        ]);
+        if (is_wp_error($result)) {
+            wp_send_json_error($result->get_error_message());
+        }
+        wp_send_json_success($result);
     }
 
     /** Genera la descripción / descripción corta pendiente de un producto (máx. HSY_CONTENT_BATCH). */

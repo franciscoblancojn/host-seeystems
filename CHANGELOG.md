@@ -7,9 +7,11 @@ Todos los cambios importantes del plugin Host Seeystems. Formato basado en [Keep
 ## [Sin publicar]
 
 ### ✨ Añadido
-- 🤖 **Descripciones con IA** usando el plugin IA Conector (Gemini, Groq…): genera la descripción y la descripción corta de los productos importados que las tienen pendientes. Se elige la conexión y se pueden añadir instrucciones (tono, largo); se puede ver el prompt de ejemplo.
+- 🤖 **Descripciones con IA** usando el plugin IA Conector (Gemini, Groq…): genera la descripción y la descripción corta de los productos importados que las tienen pendientes. Se elige la conexión de IA.
 - ⏱️ Se generan justo después de importar (opcional) o con el botón «Generar descripciones pendientes» de la pestaña Productos, de a un producto y con progreso.
-- 🔎 Si la búsqueda en Google está activa, lo encontrado se pasa a la IA como contexto.
+- ✍️ **Prompts personalizables** (uno para la descripción y otro para la corta) con variables: `{nombre}`, `{nombre_tienda}`, `{marca}`, `{referencia}`, `{genero}`, `{correa}`, `{caja}`, `{tamano}`, `{resistencia_agua}`, `{caracteristicas}`, `{info_web}`, `{fuente_web}` y `{descripcion}`. Lista de variables con clic para insertar y botón para restaurar el prompt por defecto (un prompt vacío o igual al de por defecto sigue al de por defecto).
+- 🧪 **Probar los prompts** con un producto importado: genera con los prompts del formulario sin guardarlos y muestra el resultado y los prompts enviados, sin cambiar el producto.
+- 🔎 Si la búsqueda en Google está activa, lo encontrado llega a la IA en `{info_web}`.
 
 ### 🔄 Cambiado
 - 📝 «Pendiente» = producto importado sin descripción, o con la descripción corta automática (lista de características, meta `_hsy_short_auto`). Lo escrito a mano o generado antes nunca se reemplaza; los productos importados antes también se reconocen.

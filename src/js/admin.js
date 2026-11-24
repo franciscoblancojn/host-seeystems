@@ -351,10 +351,65 @@ jQuery(function ($) {
         hsy_post('rows', {}).then(hsy_set_rows);
     }
 
-    // Pestaña Importación: mostrar el prompt de ejemplo.
-    $page.on('click', '#hsy-prompt-toggle', function () {
-        $('#hsy-prompt').prop('hidden', function (i, hidden) {
-            return !hidden;
+    // ------------------------------------------------------------------ prompts (pestaña Importación)
+
+    var $lastPrompt = $('#hsy-prompt-description');
+    $page.on('focus', '.hsy-prompt-input', function () {
+        $lastPrompt = $(this);
+    });
+
+    // Clic en una variable: se inserta donde está el cursor del último prompt usado.
+    $page.on('click', '.hsy-var', function () {
+        var el = $lastPrompt.get(0);
+        if (!el) {
+            return;
+        }
+        var text = $(this).text();
+        var start = typeof el.selectionStart === 'number' ? el.selectionStart : el.value.length;
+        var end = typeof el.selectionEnd === 'number' ? el.selectionEnd : el.value.length;
+        el.value = el.value.slice(0, start) + text + el.value.slice(end);
+        el.focus();
+        el.selectionStart = el.selectionEnd = start + text.length;
+    });
+
+    $page.on('click', '.hsy-prompt-reset', function () {
+        var $target = $($(this).data('target'));
+        if (window.confirm('¿Restaurar el prompt por defecto? Se pierde el texto actual al guardar.')) {
+            $target.val($target.data('default'));
+        }
+    });
+
+    $page.on('click', '#hsy-preview', function () {
+        var productId = $('#hsy-preview-product').val();
+        if (!productId) {
+            hsy_message('#hsy-preview-message', 'Elige un producto importado.', 'error');
+            return;
+        }
+        var $btn = $(this).prop('disabled', true);
+        $('#hsy-preview-spinner').addClass('is-active');
+        hsy_message('#hsy-preview-message', 'Generando… (dos llamadas a la IA)', 'info');
+        $('#hsy-preview-result').prop('hidden', true).empty();
+        hsy_post('preview', {
+            product_id: productId,
+            prompt_description: $('#hsy-prompt-description').val(),
+            prompt_short: $('#hsy-prompt-short').val()
+        }).then(function (data) {
+            hsy_message('#hsy-preview-message', 'Vista previa de «' + data.product + '». No se guardó nada.' +
+                (data.web ? ' Información de la web: ' + data.web : '') +
+                (data.warnings && data.warnings.length ? ' (' + data.warnings.join(' · ') + ')' : ''), 'ok');
+            // El HTML ya viene limpio del servidor (wp_kses con las etiquetas permitidas).
+            var $r = $('#hsy-preview-result');
+            $r.append($('<h4>').text('Descripción corta'), $('<div class="hsy-preview__html">').html(data.short_description));
+            $r.append($('<h4>').text('Descripción'), $('<div class="hsy-preview__html">').html(data.description));
+            $r.append($('<details>').append($('<summary>').text('Prompts enviados'),
+                $('<pre class="hsy-prompt">').text(data.prompt_description),
+                $('<pre class="hsy-prompt">').text(data.prompt_short)));
+            $r.prop('hidden', false);
+        }, function (error) {
+            hsy_message('#hsy-preview-message', error, 'error');
+        }).always(function () {
+            $btn.prop('disabled', false);
+            $('#hsy-preview-spinner').removeClass('is-active');
         });
     });
 });

@@ -125,3 +125,30 @@
 	padding: 8px 12px;
 	font-size: 12px;
 }
+
+.hsy-page .hsy-vars {
+	max-width: 760px;
+	margin-bottom: 12px;
+}
+
+.hsy-page .hsy-vars summary {
+	cursor: pointer;
+	font-weight: 600;
+}
+
+.hsy-page .hsy-var {
+	cursor: pointer;
+}
+
+.hsy-page .hsy-preview {
+	max-width: 760px;
+	margin-top: 12px;
+	padding: 8px 16px;
+	background: #fff;
+	border: 1px solid #dcdcde;
+}
+
+.hsy-page .hsy-preview__html {
+	padding: 4px 12px;
+	border-left: 3px solid #2271b1;
+}

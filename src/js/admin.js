@@ -95,6 +95,21 @@ jQuery(function ($) {
         return hsy_text(stock);
     }
 
+    // Descripción en la tabla: 20 caracteres y el texto completo en un tooltip; badge si está pendiente.
+    var HSY_TEXT_PREVIEW = 20;
+
+    function hsy_text_cell(row, text, pending) {
+        if (!row.product_id) {
+            return '<span class="hsy-muted">—</span>';
+        }
+        if (pending) {
+            return '<span class="hsy-badge hsy-badge--pending">Pendiente de generar con IA</span>';
+        }
+        text = String(text || '');
+        var short = text.length > HSY_TEXT_PREVIEW ? $.trim(text.slice(0, HSY_TEXT_PREVIEW)) + '…' : text;
+        return '<span class="hsy-tip" tabindex="0" data-tip="' + hsy_text(text) + '">' + hsy_text(short) + '</span>';
+    }
+
     function hsy_row_html(row) {
         return '<tr data-id="' + hsy_text(row.id) + '">' +
             '<th scope="row" class="check-column"><input type="checkbox" class="hsy-check" value="' + hsy_text(row.id) + '"></th>' +
@@ -102,12 +117,14 @@ jQuery(function ($) {
             (row.image ? '<img src="' + hsy_text(row.image) + '" alt="" loading="lazy">' : '<span class="hsy-noimg"></span>') +
             '<div><strong>' + hsy_text(row.name) + '</strong><br><span class="hsy-muted">' + hsy_text(row.brand) + '</span></div>' +
             '</div></td>' +
-            '<td>' + hsy_text(row.sku) + '</td>' +
-            '<td>' + hsy_price(row.pvp) + '</td>' +
-            '<td>' + hsy_price(row.wholesale) + '</td>' +
+            '<td class="hsy-nowrap">' + hsy_text(row.sku) + '</td>' +
+            '<td class="hsy-nowrap">' + hsy_price(row.pvp) + '</td>' +
+            '<td class="hsy-nowrap">' + hsy_price(row.wholesale) + '</td>' +
             '<td>' + hsy_stock(row.stock) +
             (row.availability ? '<br><span class="hsy-muted">' + hsy_text(row.availability) + '</span>' : '') + '</td>' +
-            '<td class="hsy-col-status">' + hsy_status(row) + '</td>' +
+            '<td class="hsy-col-text">' + hsy_text_cell(row, row.description, row.description_pending) + '</td>' +
+            '<td class="hsy-col-text">' + hsy_text_cell(row, row.short_description, row.short_pending) + '</td>' +
+            '<td class="hsy-col-status hsy-nowrap">' + hsy_status(row) + '</td>' +
             '<td class="hsy-col-action"><button type="button" class="button button-small hsy-import-one">' +
             (row.product_id ? 'Actualizar' : 'Importar') + '</button></td>' +
             '</tr>';
@@ -133,7 +150,7 @@ jQuery(function ($) {
         for (var i = 0; i < visible.length; i++) {
             html.push(hsy_row_html(visible[i]));
         }
-        $('#hsy-rows').html(html.length ? html.join('') : '<tr><td colspan="8">No hay productos.</td></tr>');
+        $('#hsy-rows').html(html.length ? html.join('') : '<tr><td colspan="10">No hay productos.</td></tr>');
         $('#hsy-total').text(visible.length);
         $page.find('.hsy-actions, .hsy-table').prop('hidden', !rows.length);
         $page.find('.hsy-check-all').prop('checked', false);
@@ -220,10 +237,9 @@ jQuery(function ($) {
             .attr('title', D.content_enabled ? '' : 'Activa la IA o la búsqueda en Google en Importación.');
     }
 
+    // Vuelve a pedir las filas (estado, descripciones y pendientes) sin leer el catálogo de origen.
     function hsy_refresh_pending() {
-        hsy_post('pending', {}).then(function (ids) {
-            hsy_set_pending(ids.length);
-        });
+        hsy_post('rows', {}).then(hsy_set_rows);
     }
 
     // Genera descripción y descripción corta de los productos indicados, de a D.content_batch.

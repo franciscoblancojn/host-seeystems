@@ -34,7 +34,7 @@ $catalog = new HSY_USE_DATA_CATALOG();
         <span class="hsy-progress__text"></span>
     </div>
 
-    <table class="wp-list-table widefat fixed striped hsy-table" hidden>
+    <table class="wp-list-table widefat striped hsy-table" hidden>
         <thead>
             <tr>
                 <td class="manage-column check-column"><input type="checkbox" class="hsy-check-all"></td>
@@ -43,6 +43,8 @@ $catalog = new HSY_USE_DATA_CATALOG();
                 <th>PVP sugerido</th>
                 <th>Precio mayorista</th>
                 <th>Inventario</th>
+                <th class="hsy-col-text">Descripción</th>
+                <th class="hsy-col-text">Descripción corta</th>
                 <th>Estado</th>
                 <th class="hsy-col-action"></th>
             </tr>

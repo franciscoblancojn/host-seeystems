@@ -76,7 +76,12 @@
 }
 
 .hsy-page .hsy-table .hsy-col-product {
-	width: 34%;
+	min-width: 200px;
+}
+
+.hsy-page .hsy-table thead th,
+.hsy-page .hsy-table .hsy-nowrap {
+	white-space: nowrap;
 }
 
 .hsy-page .hsy-table .hsy-col-action {
@@ -151,4 +156,54 @@
 .hsy-page .hsy-preview__html {
 	padding: 4px 12px;
 	border-left: 3px solid #2271b1;
+}
+
+.hsy-page .hsy-table .hsy-col-text {
+	min-width: 170px;
+}
+
+.hsy-page .hsy-badge {
+	display: inline-block;
+	padding: 2px 8px;
+	border-radius: 10px;
+	font-size: 11px;
+	line-height: 1.5;
+	white-space: nowrap;
+}
+
+.hsy-page .hsy-badge--pending {
+	background: #fcf0f1;
+	color: #8a2424;
+	border: 1px solid #f0b8bc;
+}
+
+/* Tooltip con el texto completo (hover y foco con teclado). */
+.hsy-page .hsy-tip {
+	position: relative;
+	cursor: help;
+	border-bottom: 1px dotted #8c8f94;
+}
+
+.hsy-page .hsy-tip:hover::after,
+.hsy-page .hsy-tip:focus::after {
+	content: attr(data-tip);
+	position: absolute;
+	z-index: 100;
+	right: 0;
+	top: calc(100% + 6px);
+	width: 420px;
+	max-width: 70vw;
+	padding: 8px 10px;
+	background: #1d2327;
+	color: #fff;
+	font-size: 12px;
+	line-height: 1.5;
+	white-space: pre-line;
+	border-radius: 4px;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, .2);
+}
+
+/* El atributo hidden manda aunque la clase ponga display: flex (barras de acciones, progreso…). */
+.hsy-page [hidden][hidden] {
+	display: none;
 }

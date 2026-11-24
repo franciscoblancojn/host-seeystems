@@ -43,11 +43,12 @@ class HSY_CATALOG_SERVICE
     }
 
     /**
-     * Filas para la tabla: producto del catálogo + id del producto importado (si existe).
+     * Filas para la tabla: producto del catálogo + id del producto importado (si existe) y sus descripciones.
      */
     public static function rows()
     {
         $map = HSY_IMPORTER::imported_map();
+        $texts = HSY_CONTENT::texts(array_values($map));
         $rows = [];
         foreach ((new HSY_USE_DATA_CATALOG())->items() as $id => $item) {
             $product_id = $map[(string) $id] ?? 0;
@@ -64,6 +65,11 @@ class HSY_CATALOG_SERVICE
                 'url' => (string) ($item['url'] ?? ''),
                 'product_id' => $product_id,
                 'edit' => $product_id ? get_edit_post_link($product_id, 'raw') : '',
+                // Descripciones del producto importado (texto plano) y si están pendientes.
+                'description' => $texts[$product_id]['description'] ?? '',
+                'short_description' => $texts[$product_id]['short_description'] ?? '',
+                'description_pending' => $product_id ? ($texts[$product_id]['description_pending'] ?? true) : false,
+                'short_pending' => $product_id ? ($texts[$product_id]['short_pending'] ?? true) : false,
             ];
         }
         return $rows;

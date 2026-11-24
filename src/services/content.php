@@ -16,6 +16,9 @@
  */
 class HSY_CONTENT
 {
+    /** Largo máximo del texto que se envía a la tabla (tooltip). */
+    const TEXT_MAX = 1500;
+
     /** HTML permitido en lo que devuelve la IA. */
     const ALLOWED_TAGS = [
         'p' => [],
@@ -76,15 +79,54 @@ class HSY_CONTENT
      */
     public static function short_pending($product)
     {
-        $short = trim((string) $product->get_short_description());
+        return self::short_pending_raw($product->get_short_description(), $product->get_meta(HSY_SHORT_AUTO_META));
+    }
+
+    /**
+     * Misma regla con los valores en crudo (post_excerpt y la meta), para listados sin cargar el producto.
+     */
+    public static function short_pending_raw($short, $auto)
+    {
+        $short = trim((string) $short);
         if ('' === trim(wp_strip_all_tags($short))) {
             return true;
         }
-        $auto = $product->get_meta(HSY_SHORT_AUTO_META);
-        if ('' === $auto) {
+        if ('' === (string) $auto) {
             return self::is_auto_list($short);
         }
         return 'yes' === $auto;
+    }
+
+    /**
+     * Descripción y descripción corta de varios productos en una consulta, para la tabla:
+     * [product_id => ['description' => texto, 'short_description' => texto, 'description_pending', 'short_pending']].
+     */
+    public static function texts($product_ids)
+    {
+        global $wpdb;
+        $product_ids = array_filter(array_map('intval', (array) $product_ids));
+        if (!$product_ids) {
+            return [];
+        }
+        $in = implode(',', $product_ids);
+        $rows = $wpdb->get_results($wpdb->prepare(
+            "SELECT p.ID, p.post_content, p.post_excerpt, sa.meta_value AS short_auto
+             FROM {$wpdb->posts} p
+             LEFT JOIN {$wpdb->postmeta} sa ON sa.post_id = p.ID AND sa.meta_key = %s
+             WHERE p.ID IN ($in)", // $in son enteros (intval)
+            HSY_SHORT_AUTO_META
+        ));
+        $out = [];
+        foreach ($rows as $row) {
+            $description = self::text($row->post_content);
+            $out[(int) $row->ID] = [
+                'description' => mb_substr($description, 0, self::TEXT_MAX),
+                'short_description' => mb_substr(self::text($row->post_excerpt), 0, self::TEXT_MAX),
+                'description_pending' => '' === $description,
+                'short_pending' => self::short_pending_raw($row->post_excerpt, $row->short_auto),
+            ];
+        }
+        return $out;
     }
 
     public static function is_auto_list($html)
@@ -388,7 +430,7 @@ Responde solo con el HTML, sin explicaciones ni bloques de código.";
     /**
      * HTML → texto para las variables: un párrafo / elemento de lista por línea.
      */
-    private static function text($html)
+    public static function text($html)
     {
         $html = preg_replace('#<br\s*/?>|</(p|li|h[1-6]|ul|ol)>#i', "\n", (string) $html);
         $html = preg_replace('#<li[^>]*>#i', '- ', $html);

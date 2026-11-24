@@ -12,12 +12,17 @@ Todos los cambios importantes del plugin Host Seeystems. Formato basado en [Keep
 - ✍️ **Prompts personalizables** (uno para la descripción y otro para la corta) con variables: `{nombre}`, `{nombre_tienda}`, `{marca}`, `{referencia}`, `{genero}`, `{correa}`, `{caja}`, `{tamano}`, `{resistencia_agua}`, `{caracteristicas}`, `{info_web}`, `{fuente_web}` y `{descripcion}`. Lista de variables con clic para insertar y botón para restaurar el prompt por defecto (un prompt vacío o igual al de por defecto sigue al de por defecto).
 - 🧪 **Probar los prompts** con un producto importado: genera con los prompts del formulario sin guardarlos y muestra el resultado y los prompts enviados, sin cambiar el producto.
 - 🔎 Si la búsqueda en Google está activa, lo encontrado llega a la IA en `{info_web}`.
+- 📋 Columnas **Descripción** y **Descripción corta** en la tabla de productos: los primeros 20 caracteres y el texto completo en un tooltip (hover o foco). Si falta, o la corta es todavía la lista automática, muestra el badge «Pendiente de generar con IA». La tabla se refresca al terminar de importar o de generar.
 
 ### 🔄 Cambiado
+- 📋 Tabla de productos con ancho automático: referencia, precios y estado ya no se cortan en varias líneas.
 - 📝 «Pendiente» = producto importado sin descripción, o con la descripción corta automática (lista de características, meta `_hsy_short_auto`). Lo escrito a mano o generado antes nunca se reemplaza; los productos importados antes también se reconocen.
 - 🧾 La lista de características pasa a ser la descripción corta **provisional**: al reimportar solo se reescribe si sigue siendo la automática.
 - 🔎 La búsqueda en Google ya no corre al importar, sino en el paso de descripciones (sin IA, el texto encontrado sigue siendo la descripción).
 - ⚙️ La sección «Descripción desde Google» de Importación pasa a llamarse **Descripciones** (IA, después de importar, Google y API key).
+
+### 🐛 Corregido
+- Las barras ocultas (acciones de la tabla, descripciones pendientes) se mostraban igual porque su `display: flex` anulaba el atributo `hidden`.
 
 ## [1.0.2] - 2026-11-23
 

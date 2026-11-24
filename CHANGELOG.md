@@ -4,7 +4,7 @@ Todos los cambios importantes del plugin Host Seeystems. Formato basado en [Keep
 
 > ✍️ Antes de publicar, agrega arriba una sección `## [Sin publicar]` con los cambios. `npm run push-v -- patch|minor|major` la renombra a `## [X.Y.Z] - fecha`, y no publica si esa sección no existe.
 
-## [Sin publicar]
+## [1.1.0] - 2026-11-24
 
 ### ✨ Añadido
 - 🤖 **Descripciones con IA** usando el plugin IA Conector (Gemini, Groq…): genera la descripción y la descripción corta de los productos importados que las tienen pendientes. Se elige la conexión de IA.

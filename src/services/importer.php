@@ -87,7 +87,7 @@ class HSY_IMPORTER
             }
         }
         if ($has('name')) {
-            $product->set_name(self::name($item, $config['name_template']));
+            $product->set_name(self::name($item, $config['name_template'], $config));
         }
         if ($has('price') && null !== $item['pvp']) {
             // PVP sugerido = precio normal. El precio rebajado lo define la tienda: no se toca.
@@ -189,18 +189,79 @@ class HSY_IMPORTER
     }
 
     /**
-     * Nombre según la plantilla ({nombre}, {genero}, {marca}, {ref}). Una variable vacía no deja espacios dobles.
+     * Nombre según la plantilla ({tipo}, {nombre}, {genero}, {marca}, {ref}).
+     *
+     * Sin repetidos: las palabras fijas de la plantilla y las de {tipo} se quitan si ya aparecen en
+     * los datos del producto (sin mayúsculas, acentos ni plural). Con «{tipo} {marca} {nombre}»:
+     * reloj «LEILA SET» → «Reloj Armani Exchange LEILA SET»; joya «Aretes» → «Michael Kors Joyas Aretes»
+     * (el tipo de las joyas está vacío por defecto); un nombre que ya diga «Reloj…» no lo repite.
      */
-    private static function name($item, $template)
+    public static function name($item, $template, $config = [])
     {
-        $name = strtr((string) $template, [
-            '{nombre}' => $item['name'],
+        $is_jewelry = HSY_CATEGORIES::is_jewelry($item['brand'] ?? '', $config);
+        $data = [
+            '{nombre}' => (string) $item['name'],
             '{genero}' => (string) ($item['attributes']['Género'] ?? ''),
-            '{marca}' => $item['brand'],
-            '{ref}' => $item['sku'],
-        ]);
-        $name = trim(preg_replace('/\s+/', ' ', $name));
+            '{marca}' => (string) $item['brand'],
+            '{ref}' => (string) $item['sku'],
+        ];
+        $type = (string) ($is_jewelry ? ($config['type_jewelry'] ?? '') : ($config['type_watch'] ?? 'Reloj'));
+
+        // Palabras de los datos del producto (para no repetirlas en las partes fijas).
+        $taken = [];
+        foreach ($data as $value) {
+            foreach (self::stems($value) as $stem) {
+                $taken[$stem] = true;
+            }
+        }
+        // En las joyas, un «Reloj» escrito como texto fijo se trata como {tipo} (se cambia por el de joyas).
+        $watch_stems = self::stems((string) ($config['type_watch'] ?? 'Reloj'));
+        $fixed = function ($text, $is_type = false) use ($taken, $is_jewelry, $watch_stems, $config) {
+            $keep = [];
+            foreach (preg_split('/\s+/u', (string) $text) as $word) {
+                $stems = self::stems($word);
+                if ($stems && isset($taken[$stems[0]])) {
+                    continue;
+                }
+                if (!$is_type && $is_jewelry && $stems && in_array($stems[0], $watch_stems, true)) {
+                    $word = (string) ($config['type_jewelry'] ?? '');
+                }
+                $keep[] = $word;
+            }
+            return implode(' ', $keep);
+        };
+
+        // Recorre la plantilla: variables de datos tal cual; texto fijo y {tipo}, sin repetidos.
+        $parts = preg_split('/(\{[a-z]+\})/', (string) $template, -1, PREG_SPLIT_DELIM_CAPTURE);
+        $out = '';
+        foreach ($parts as $part) {
+            if (isset($data[$part])) {
+                $out .= $data[$part];
+            } elseif ('{tipo}' === $part) {
+                $out .= $fixed($type, true);
+            } else {
+                $out .= ' ' . $fixed($part) . ' ';
+            }
+        }
+        $name = trim(preg_replace('/\s+/u', ' ', $out));
         return '' !== $name ? $name : $item['name'];
+    }
+
+    /**
+     * Raíces de las palabras para comparar: sin mayúsculas, acentos ni plural («Relojes» → «reloj», «Aretes» → «aret»).
+     */
+    private static function stems($text)
+    {
+        $stems = [];
+        foreach (explode(' ', HSY_BRANDS::key_words($text)) as $word) {
+            if (strlen($word) < 3) {
+                continue;
+            }
+            $word = preg_replace('/(es|s)$/', '', $word);
+            $word = preg_replace('/[aeo]$/', '', $word);
+            $stems[] = $word;
+        }
+        return $stems;
     }
 
     /**

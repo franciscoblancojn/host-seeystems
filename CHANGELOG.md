@@ -4,6 +4,14 @@ Todos los cambios importantes del plugin Host Seeystems. Formato basado en [Keep
 
 > ✍️ Antes de publicar, agrega arriba una sección `## [Sin publicar]` con los cambios. `npm run push-v -- patch|minor|major` la renombra a `## [X.Y.Z] - fecha`, y no publica si esa sección no existe.
 
+## [1.4.1] - 2026-11-25
+
+### ✨ Añadido
+- ✏️ Variable `{tipo}` en la plantilla del nombre: «Reloj» en los relojes y vacío en las joyas (su nombre del catálogo ya es el tipo: «Aretes», «Brazalete»). Ambos se configuran en Importación.
+
+### 🔄 Cambiado
+- ✏️ **Nombre sin repetidos**: el texto fijo de la plantilla y el `{tipo}` se quitan si esa palabra ya está en los datos del producto (sin mayúsculas, acentos ni plural). En las joyas, un «Reloj» escrito como texto fijo se cambia por el tipo de joya. Con «Reloj {marca} {nombre} {genero} {ref}»: reloj → «Reloj Armani Exchange LEILA SET DAMA AX7186SET»; joya → «Michael Kors Joyas Aretes DAMA MKJ8655040».
+
 ## [1.4.0] - 2026-11-24
 
 ### ✨ Añadido

@@ -21,7 +21,12 @@
         <th scope="row"><label for="hsy-name-template">Nombre del producto</label></th>
         <td>
             <input type="text" id="hsy-name-template" name="hsy[name_template]" value="<?= esc_attr($config['name_template']) ?>" class="regular-text code">
-            <p class="description">Plantilla con <code>{nombre}</code> (obligatorio), <code>{genero}</code>, <code>{marca}</code> y <code>{ref}</code>. Por defecto <code>{nombre} {genero} {marca} {ref}</code> → «LEILA SET DAMA Armani Exchange AX7186SET».</p>
+            <p class="description">Plantilla con <code>{nombre}</code> (obligatorio), <code>{tipo}</code>, <code>{genero}</code>, <code>{marca}</code> y <code>{ref}</code>. P. ej. <code>{tipo} {marca} {nombre} {genero} {ref}</code> → «Reloj Armani Exchange LEILA SET DAMA AX7186SET» y, en una joya, «Michael Kors Joyas Aretes DAMA MKJ8655040».</p>
+            <p>
+                <label><code>{tipo}</code> de los relojes <input type="text" name="hsy[type_watch]" value="<?= esc_attr($config['type_watch']) ?>" class="small-text" style="width:10em"></label>
+                &nbsp; <label>de las joyas <input type="text" name="hsy[type_jewelry]" value="<?= esc_attr($config['type_jewelry']) ?>" class="small-text" style="width:10em" placeholder="(vacío)"></label>
+            </p>
+            <p class="description"><strong>Sin repetidos:</strong> el texto fijo de la plantilla y el <code>{tipo}</code> se quitan si esa palabra ya está en los datos del producto (sin mayúsculas, acentos ni plural). Así «Reloj» no se repite si el nombre ya dice «Reloj…», y en las joyas, cuyo nombre ya es el tipo («Aretes», «Brazalete»), el tipo va vacío. Si escribes «Reloj» como texto fijo, en las joyas se cambia por su <code>{tipo}</code> igual que si usaras la variable.</p>
         </td>
     </tr>
     <tr>

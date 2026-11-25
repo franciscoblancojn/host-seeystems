@@ -26,7 +26,9 @@ class HSY_USE_DATA_CONFIG extends HSY_USE_DATA_BASE
         'category_map' => [],      // [GÉNERO => [term_id…]]; vacío = HSY_CATEGORIES::default_map()
         'jewelry_words' => 'joyas, joyería, jewelry', // palabras de la marca que la hacen «joya»
         'jewelry_category' => 'Joyas', // categoría raíz de las joyas (se crea con Mujer / Hombre dentro)
-        'name_template' => '{nombre} {genero} {marca} {ref}', // variables: {nombre} {genero} {marca} {ref}
+        'name_template' => '{nombre} {genero} {marca} {ref}', // variables: {tipo} {nombre} {genero} {marca} {ref}
+        'type_watch' => 'Reloj',   // {tipo} de los relojes
+        'type_jewelry' => '',      // {tipo} de las joyas ('' = el nombre del catálogo ya es el tipo: «Aretes»)
         // Stock mínimo: con min_stock unidades o menos el producto importado queda con stock 0.
         'min_stock' => 3,
         // Descripciones pendientes (HSY_CONTENT): IA del plugin IA Conector y/o Google (Serper.dev).
@@ -152,6 +154,8 @@ class HSY_USE_DATA_CONFIG extends HSY_USE_DATA_BASE
             $out['ai_style'] = empty($input['ai_style']) ? 0 : 1;
             $out['ai_prompt_style'] = self::prompt($input['ai_prompt_style'] ?? '', HSY_CONTENT::DEFAULT_PROMPT_STYLE);
             $out['name_template'] = false !== strpos($template, '{nombre}') ? $template : self::DEFAULTS['name_template'];
+            $out['type_watch'] = sanitize_text_field($input['type_watch'] ?? self::DEFAULTS['type_watch']);
+            $out['type_jewelry'] = sanitize_text_field($input['type_jewelry'] ?? self::DEFAULTS['type_jewelry']);
             $out['min_stock'] = max(0, (int) ($input['min_stock'] ?? self::DEFAULTS['min_stock']));
             $out['describe'] = empty($input['describe']) ? 0 : 1;
             $out['ai_enabled'] = empty($input['ai_enabled']) ? 0 : 1;

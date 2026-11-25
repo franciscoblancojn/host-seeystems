@@ -4,7 +4,7 @@ Todos los cambios importantes del plugin Host Seeystems. Formato basado en [Keep
 
 > ✍️ Antes de publicar, agrega arriba una sección `## [Sin publicar]` con los cambios. `npm run push-v -- patch|minor|major` la renombra a `## [X.Y.Z] - fecha`, y no publica si esa sección no existe.
 
-## [Sin publicar]
+## [1.2.1] - 2026-11-24
 
 ### ✨ Añadido
 - 🧩 Variables nuevas para los prompts: `{contexto}` (todos los datos del producto que existan, uno por línea: referencia, nombre, marca, info de la marca, características e información de la web; los vacíos se omiten), `{info_marca}` (descripción de la marca) y `{tienda}` (nombre del sitio).

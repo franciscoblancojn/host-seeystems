@@ -285,3 +285,21 @@
 	color: #0a4b78;
 	border: 1px solid #b4d0eb;
 }
+
+.hsy-page .hsy-catmap {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 12px;
+}
+
+.hsy-page .hsy-catmap__gender {
+	min-width: 220px;
+	padding: 8px 12px;
+	background: #fff;
+	border: 1px solid #dcdcde;
+}
+
+.hsy-page .hsy-catmap__list label {
+	display: block;
+	line-height: 1.9;
+}

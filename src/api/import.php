@@ -122,6 +122,7 @@ class HSY_API_IMPORT
         $result = HSY_CONTENT::preview(absint($_POST['product_id'] ?? 0), [
             'ai_prompt_description' => HSY_USE_DATA_CONFIG::prompt(wp_unslash($_POST['prompt_description'] ?? ''), ''),
             'ai_prompt_short' => HSY_USE_DATA_CONFIG::prompt(wp_unslash($_POST['prompt_short'] ?? ''), ''),
+            'ai_prompt_style' => HSY_USE_DATA_CONFIG::prompt(wp_unslash($_POST['prompt_style'] ?? ''), ''),
         ]);
         if (is_wp_error($result)) {
             wp_send_json_error($result->get_error_message());

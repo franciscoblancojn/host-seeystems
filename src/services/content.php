@@ -85,6 +85,15 @@ class HSY_CONTENT
     }
 
     /**
+     * ¿Falta elegir el estilo (subcategoría) con IA? Solo si la clasificación por IA está activa.
+     */
+    public static function style_pending($product, $config = null)
+    {
+        $config = $config ?: (new HSY_USE_DATA_CONFIG())->get();
+        return !empty($config['ai_style']) && 'pending' === $product->get_meta(HSY_STYLE_META);
+    }
+
+    /**
      * ¿La descripción corta falta o es la lista automática? Los productos importados antes de que
      * existiera HSY_SHORT_AUTO_META se reconocen por la forma de la lista (<ul><li><strong>X:</strong> …).
      */
@@ -151,16 +160,22 @@ class HSY_CONTENT
     public static function pending_ids($limit = 2000)
     {
         global $wpdb;
+        // El estilo solo cuenta como pendiente si la IA lo clasifica (ajuste ai_style).
+        $style = !empty((new HSY_USE_DATA_CONFIG())->get()['ai_style']) ? 'pending' : '__off__';
         return array_map('intval', $wpdb->get_col($wpdb->prepare(
             "SELECT p.ID FROM {$wpdb->posts} p
              INNER JOIN {$wpdb->postmeta} imp ON imp.post_id = p.ID AND imp.meta_key = %s AND imp.meta_value = 'yes'
              LEFT JOIN {$wpdb->postmeta} sa ON sa.post_id = p.ID AND sa.meta_key = %s
+             LEFT JOIN {$wpdb->postmeta} st ON st.post_id = p.ID AND st.meta_key = %s
              WHERE p.post_type = 'product' AND p.post_status <> 'trash'
                AND (TRIM(p.post_content) = '' OR TRIM(p.post_excerpt) = '' OR sa.meta_value = 'yes'
-                    OR (sa.meta_value IS NULL AND p.post_excerpt LIKE '<ul><li><strong>%%'))
+                    OR (sa.meta_value IS NULL AND p.post_excerpt LIKE '<ul><li><strong>%%')
+                    OR st.meta_value = %s)
              ORDER BY p.ID ASC LIMIT %d",
             HSY_IMPORTED_META,
             HSY_SHORT_AUTO_META,
+            HSY_STYLE_META,
+            $style,
             $limit
         )));
     }
@@ -184,6 +199,7 @@ class HSY_CONTENT
         'descripcion' => 'Descripción del producto (la recién generada o la que ya tenía; útil en el prompt de la corta)',
         'info_marca' => 'Descripción de la marca (la de la marca en Productos → Marcas)',
         'tienda' => 'Nombre de la tienda (Ajustes → Generales → Título del sitio)',
+        'opciones' => 'Solo en el prompt del estilo: las subcategorías posibles, una por línea («- Análogo»)',
         'contexto' => 'Todos los datos del producto que existan, uno por línea (referencia, nombre, marca, info de la marca, características e información de la web); los vacíos se omiten',
     ];
 
@@ -239,6 +255,20 @@ CONTEXTO DEL PRODUCTO:
 SALIDA:
 Devuelve únicamente el HTML final de la descripción larga.";
 
+    const DEFAULT_PROMPT_STYLE = "Eres un experto en relojería y catalogación de productos para ecommerce.
+
+Clasifica el producto en el estilo o los estilos que le correspondan, eligiendo SOLO entre estas opciones:
+{opciones}
+
+REGLAS:
+- Elige entre 1 y 2 opciones, la más evidente primero.
+- Usa los datos del CONTEXTO y lo que sepas del modelo por su referencia; si dudas, elige solo la más segura.
+- Digital = pantalla digital; Análogo = agujas; Cronógrafo = con cronómetro; Smartwatch = reloj inteligente; Deportivo, Casual y Elegante según el diseño y el material.
+- Responde SOLO con los nombres exactos de las opciones, separados por coma. Sin explicaciones.
+
+CONTEXTO DEL PRODUCTO:
+{contexto}";
+
     const DEFAULT_PROMPT_SHORT = "Eres un especialista senior en contenido para ecommerce, SEO orgánico, búsqueda por IA y WooCommerce.
 
 ADVERTENCIA: Si incluyes HTML, títulos, listas, emojis, comillas o cualquier formato que no sea texto plano, la respuesta será RECHAZADA automáticamente.
@@ -274,7 +304,8 @@ SALIDA (texto plano, una sola línea, sin formato):";
         if (!$product || !HSY_STOCK::is_imported($product)) {
             return new WP_Error('hsy_content_product', 'El producto #' . (int) $product_id . ' no es un producto importado.');
         }
-        if (!self::is_pending($product)) {
+        $need_style = self::style_pending($product, $config) && self::ai_enabled($config);
+        if (!self::is_pending($product) && !$need_style) {
             return ['fields' => [], 'source' => '', 'warnings' => []];
         }
         if (!self::enabled($config)) {
@@ -305,12 +336,36 @@ SALIDA (texto plano, una sola línea, sin formato):";
                 $fields[] = 'short_description';
             }
             $warnings = array_merge($warnings, $generated['warnings']);
-            $source = 'ia:' . implode(',', $generated['connections']);
-            $product->update_meta_data('_hsy_content_ai', implode(',', $generated['connections']));
+            if ($generated['connections']) {
+                $source = 'ia:' . implode(',', $generated['connections']);
+                $product->update_meta_data('_hsy_content_ai', implode(',', $generated['connections']));
+            }
         } elseif ($web && $need_description) {
             $product->set_description(wpautop(esc_html($web['text'])));
             $fields[] = 'description';
             $source = 'google';
+        }
+
+        // Estilo (subcategorías) elegido por la IA entre las opciones del producto.
+        if ($need_style) {
+            $style = self::classify_style($product, $web, $config);
+            if (is_wp_error($style)) {
+                $warnings[] = 'Estilo: ' . $style->get_error_message();
+            } else {
+                $warnings = array_merge($warnings, $style['warnings']);
+                $product->update_meta_data(HSY_STYLE_META, $style['applied'] ? 'done' : 'none');
+                $product->update_meta_data('_hsy_style_names', implode(', ', $style['applied']));
+                if ($style['applied']) {
+                    $fields[] = 'style';
+                    $source = $source ?: 'ia:' . $style['connection'];
+                    if ('' === (string) $product->get_meta('_hsy_content_ai')) {
+                        $product->update_meta_data('_hsy_content_ai', $style['connection']);
+                    }
+                } else {
+                    $warnings[] = 'Estilo: la IA no eligió ninguna opción válida.';
+                    $product->save(); // guarda «none» aunque no haya otros cambios
+                }
+            }
         }
 
         if ($web) {
@@ -361,8 +416,20 @@ SALIDA (texto plano, una sola línea, sin formato):";
         if (is_wp_error($short)) {
             return $short;
         }
+        // Estilo: se calcula pero no se aplica (vista previa).
+        $style = null;
+        if (!empty($config['ai_style'])) {
+            $style = self::classify_style($product, $web['web'], $config, false);
+            if (is_wp_error($style)) {
+                $style = ['applied' => [], 'prompt' => '', 'answer' => $style->get_error_message(), 'warnings' => []];
+            }
+        }
         return [
             'product' => $product->get_name(),
+            'style' => $style ? $style['applied'] : null,
+            'style_options' => array_keys(HSY_CATEGORIES::style_options($product)),
+            'style_answer' => $style ? $style['answer'] : '',
+            'prompt_style' => $style ? $style['prompt'] : '',
             'prompt_description' => $prompt_description,
             'description' => $description['html'],
             'prompt_short' => $prompt_short,
@@ -477,6 +544,49 @@ SALIDA (texto plano, una sola línea, sin formato):";
         return is_wp_error($web)
             ? ['web' => null, 'warnings' => [$web->get_error_message()]]
             : ['web' => $web, 'warnings' => []];
+    }
+
+    /**
+     * Pide a la IA el estilo entre las opciones del producto y lo aplica (sin guardar).
+     * Devuelve ['applied' => nombres, 'connection', 'warnings', 'prompt', 'answer'] o WP_Error.
+     */
+    public static function classify_style($product, $web, $config, $apply = true)
+    {
+        $options = HSY_CATEGORIES::style_options($product);
+        if (!$options) {
+            return ['applied' => [], 'connection' => '', 'warnings' => [], 'prompt' => '', 'answer' => ''];
+        }
+        $vars = self::variables($product, $web);
+        $vars['opciones'] = implode("\n", array_map(function ($name) {
+            return '- ' . $name;
+        }, array_keys($options)));
+        $prompt = self::render($config['ai_prompt_style'], $vars);
+        $answer = self::ask($prompt, $config);
+        if (is_wp_error($answer)) {
+            return $answer;
+        }
+        $names = preg_split('/[,\n;]+/', wp_strip_all_tags($answer['html']));
+        $names = array_values(array_filter(array_map(function ($n) {
+            return trim(preg_replace('/^[\s\-*.]+|[\s.\"\']+$/u', '', $n));
+        }, $names), 'strlen'));
+        $applied = $apply ? HSY_CATEGORIES::apply_styles($product, array_slice($names, 0, 3)) : [];
+        if (!$apply) {
+            // Vista previa: solo los nombres que existen entre las opciones.
+            $keys = array_map(['HSY_BRANDS', 'plain_key'], array_keys($options));
+            foreach (array_slice($names, 0, 3) as $n) {
+                $i = array_search(HSY_BRANDS::plain_key($n), $keys, true);
+                if (false !== $i) {
+                    $applied[] = array_keys($options)[$i];
+                }
+            }
+        }
+        return [
+            'applied' => $applied,
+            'connection' => $answer['connection'],
+            'warnings' => $answer['warnings'],
+            'prompt' => $prompt,
+            'answer' => trim(wp_strip_all_tags($answer['html'])),
+        ];
     }
 
     /**

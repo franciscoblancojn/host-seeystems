@@ -498,18 +498,25 @@ jQuery(function ($) {
         hsy_post('preview', {
             product_id: productId,
             prompt_description: $('#hsy-prompt-description').val(),
-            prompt_short: $('#hsy-prompt-short').val()
+            prompt_short: $('#hsy-prompt-short').val(),
+            prompt_style: $('#hsy-prompt-style').val()
         }).then(function (data) {
             hsy_message('#hsy-preview-message', 'Vista previa de «' + data.product + '» con ' + (data.connections || []).join(', ') + '. No se guardó nada.' +
                 (data.web ? ' Información de la web: ' + data.web : '') +
                 (data.warnings && data.warnings.length ? ' (' + data.warnings.join(' · ') + ')' : ''), 'ok');
             // El HTML ya viene limpio del servidor (wp_kses con las etiquetas permitidas).
             var $r = $('#hsy-preview-result');
+            if (data.style !== null) {
+                $r.append($('<h4>').text('Estilo (subcategorías)'), $('<div class="hsy-preview__html">').text(
+                    (data.style.length ? data.style.join(', ') : 'ninguno') + '  —  opciones: ' + (data.style_options.join(', ') || 'ninguna') +
+                    (data.style_answer ? '  —  respuesta de la IA: «' + data.style_answer + '»' : '')));
+            }
             $r.append($('<h4>').text('Descripción corta'), $('<div class="hsy-preview__html">').html(data.short_description));
             $r.append($('<h4>').text('Descripción'), $('<div class="hsy-preview__html">').html(data.description));
             $r.append($('<details>').append($('<summary>').text('Prompts enviados'),
                 $('<pre class="hsy-prompt">').text(data.prompt_description),
-                $('<pre class="hsy-prompt">').text(data.prompt_short)));
+                $('<pre class="hsy-prompt">').text(data.prompt_short),
+                $('<pre class="hsy-prompt">').text(data.prompt_style || '')));
             $r.prop('hidden', false);
         }, function (error) {
             hsy_message('#hsy-preview-message', error, 'error');

@@ -74,8 +74,13 @@ class HSY_IMPORTER
                     $warnings[] = 'SKU ' . $item['sku'] . ' no asignado: ' . $e->getMessage();
                 }
             }
-            if ('' !== trim((string) $config['category'])) {
-                $product->set_category_ids(self::category_ids([$config['category']]));
+        }
+        if ($has('categories')) {
+            $category_ids = HSY_CATEGORIES::ids_for($item, $config);
+            if ($category_ids) {
+                $product->set_category_ids($is_new ? $category_ids : HSY_CATEGORIES::merge_keep_styles($product->get_category_ids(), $category_ids));
+            } elseif ($is_new) {
+                $warnings[] = 'Sin categoría: el género «' . ($item['attributes']['Género'] ?? '') . '» no tiene regla en Importación → Categorías.';
             }
         }
         if ($has('name')) {
@@ -110,6 +115,10 @@ class HSY_IMPORTER
         $product->update_meta_data('_hsy_pvp', null !== $item['pvp'] ? (string) $item['pvp'] : '');
         $product->update_meta_data('_hsy_availability', $item['availability']);
         $product->update_meta_data('_hsy_stock_source', null !== $item['stock'] ? $item['stock'] : '');
+        // Estilo (subcategorías): queda pendiente para la IA si hay opciones y no se clasificó antes.
+        if ($has('categories') && 'done' !== $product->get_meta(HSY_STYLE_META)) {
+            $product->update_meta_data(HSY_STYLE_META, HSY_CATEGORIES::style_options($product) ? 'pending' : 'none');
+        }
         $product->update_meta_data('_hsy_imported_at', time());
         $product_id = $product->save();
 
@@ -213,7 +222,7 @@ class HSY_IMPORTER
     /**
      * IDs de product_cat a partir de nombres ("Padre > Hijo" crea la jerarquía). Crea las que falten.
      */
-    private static function category_ids($names)
+    public static function category_ids($names)
     {
         $ids = [];
         foreach ($names as $path) {

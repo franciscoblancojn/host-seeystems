@@ -32,11 +32,24 @@ class HSY_BRANDS
      */
     public static function key($name)
     {
-        $name = remove_accents(html_entity_decode((string) $name, ENT_QUOTES, 'UTF-8'));
-        $name = mb_strtolower($name, 'UTF-8');
-        $words = preg_split('/[^a-z0-9]+/', $name, -1, PREG_SPLIT_NO_EMPTY);
-        $words = array_diff($words, self::FILLER);
-        return implode('', $words);
+        return implode('', array_diff(explode(' ', self::key_words($name)), self::FILLER));
+    }
+
+    /**
+     * Palabras normalizadas separadas por un espacio, sin quitar ninguna: «Joyería  Fina» → «joyeria fina».
+     */
+    public static function key_words($name)
+    {
+        $name = mb_strtolower(remove_accents(html_entity_decode((string) $name, ENT_QUOTES, 'UTF-8')), 'UTF-8');
+        return implode(' ', preg_split('/[^a-z0-9]+/', $name, -1, PREG_SPLIT_NO_EMPTY));
+    }
+
+    /**
+     * Clave sin quitar palabras (para categorías: «Relojes» no es relleno ahí).
+     */
+    public static function plain_key($name)
+    {
+        return str_replace(' ', '', self::key_words($name));
     }
 
     /**

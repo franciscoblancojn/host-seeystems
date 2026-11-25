@@ -4,6 +4,17 @@ Todos los cambios importantes del plugin Host Seeystems. Formato basado en [Keep
 
 > ✍️ Antes de publicar, agrega arriba una sección `## [Sin publicar]` con los cambios. `npm run push-v -- patch|minor|major` la renombra a `## [X.Y.Z] - fecha`, y no publica si esa sección no existe.
 
+## [Sin publicar]
+
+### ✨ Añadido
+- 🗂️ **Categorías por género** (Importación → Categorías): para cada género del catálogo (DAMA, HOMBRE, UNISEX…) se marcan las categorías de la tienda. Sugerencia automática por nombre: DAMA → Relojes + Mujer, HOMBRE → Relojes + Hombre, UNISEX → Relojes + Hombre + Mujer. Las de ofertas no se muestran.
+- 💍 **Joyas**: si la marca contiene una de las palabras configuradas (por defecto «joyas, joyería, jewelry»), el producto va a «Joyas» → Mujer / Hombre según el género; se crean al importar la primera joya si no existen.
+- 🎯 **Estilo con IA**: la IA elige 1 o 2 subcategorías (Análogo, Digital, Deportivo, Casual, Elegante, Cronógrafo, Smartwatch…) entre las que existen bajo el género del producto, con su propio prompt editable (variable `{opciones}`). Queda pendiente (`_hsy_style`) hasta clasificarse; entra en «Generar descripciones pendientes» y en la vista previa.
+- «Categorías» en lo que se actualiza de los productos ya importados (conserva los estilos ya puestos).
+
+### 🔄 Cambiado
+- «Categoría de los nuevos» pasa a ser «Sin regla»: solo para productos cuyo género no tiene categorías marcadas.
+
 ## [1.3.1] - 2026-11-24
 
 ### ✨ Añadido

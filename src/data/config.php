@@ -22,7 +22,10 @@ class HSY_USE_DATA_CONFIG extends HSY_USE_DATA_BASE
         'update_existing' => 1,    // volver a importar actualiza el producto ya creado
         'update_fields' => ['price', 'stock'], // qué se actualiza en los existentes (el precio mayorista, siempre)
         'import_images' => 1,
-        'category' => '',          // categoría para los productos nuevos ('' = ninguna)
+        'category' => '',          // categoría si el género no tiene regla ('' = ninguna)
+        'category_map' => [],      // [GÉNERO => [term_id…]]; vacío = HSY_CATEGORIES::default_map()
+        'jewelry_words' => 'joyas, joyería, jewelry', // palabras de la marca que la hacen «joya»
+        'jewelry_category' => 'Joyas', // categoría raíz de las joyas (se crea con Mujer / Hombre dentro)
         'name_template' => '{nombre} {genero} {marca} {ref}', // variables: {nombre} {genero} {marca} {ref}
         // Stock mínimo: con min_stock unidades o menos el producto importado queda con stock 0.
         'min_stock' => 3,
@@ -31,6 +34,8 @@ class HSY_USE_DATA_CONFIG extends HSY_USE_DATA_BASE
         'ai_connections' => [],    // keys de conexiones de IA Conector, en orden de prioridad (la 1.ª que responda)
         'ai_prompt_description' => '', // prompt de la descripción ('' = HSY_CONTENT::DEFAULT_PROMPT_DESCRIPTION)
         'ai_prompt_short' => '',   // prompt de la descripción corta ('' = HSY_CONTENT::DEFAULT_PROMPT_SHORT)
+        'ai_style' => 1,           // la IA elige el estilo (subcategorías: Análogo, Digital…)
+        'ai_prompt_style' => '',   // prompt del estilo ('' = HSY_CONTENT::DEFAULT_PROMPT_STYLE)
         'content_after_import' => 1, // generar lo pendiente justo después de importar
         'describe' => 0,           // buscar en Google (contexto para la IA o descripción directa sin IA)
         'serper_key' => '',
@@ -44,6 +49,7 @@ class HSY_USE_DATA_CONFIG extends HSY_USE_DATA_BASE
         'stock' => 'Inventario',
         'attributes' => 'Características y marca',
         'images' => 'Imágenes',
+        'categories' => 'Categorías (género / joyas; se conservan los estilos)',
     ];
 
     /** Ajustes secretos: nunca se imprimen; vacío en el formulario = conservar. */
@@ -66,6 +72,9 @@ class HSY_USE_DATA_CONFIG extends HSY_USE_DATA_BASE
         }
         if ('' === trim((string) $config['ai_prompt_short'])) {
             $config['ai_prompt_short'] = HSY_CONTENT::DEFAULT_PROMPT_SHORT;
+        }
+        if ('' === trim((string) $config['ai_prompt_style'])) {
+            $config['ai_prompt_style'] = HSY_CONTENT::DEFAULT_PROMPT_STYLE;
         }
         return $config;
     }
@@ -131,6 +140,18 @@ class HSY_USE_DATA_CONFIG extends HSY_USE_DATA_BASE
             $out['update_fields'] = array_values(array_intersect(array_keys(self::UPDATE_FIELDS), (array) ($input['update_fields'] ?? [])));
             $out['import_images'] = empty($input['import_images']) ? 0 : 1;
             $out['category'] = sanitize_text_field($input['category'] ?? '');
+            $map = [];
+            foreach ((array) ($input['category_map'] ?? []) as $gender => $ids) {
+                $gender = HSY_CATEGORIES::gender_key($gender);
+                if ('' !== $gender) {
+                    $map[$gender] = array_values(array_unique(array_filter(array_map('absint', (array) $ids))));
+                }
+            }
+            $out['category_map'] = $map;
+            $out['jewelry_words'] = sanitize_text_field($input['jewelry_words'] ?? '');
+            $out['jewelry_category'] = sanitize_text_field($input['jewelry_category'] ?? '') ?: self::DEFAULTS['jewelry_category'];
+            $out['ai_style'] = empty($input['ai_style']) ? 0 : 1;
+            $out['ai_prompt_style'] = self::prompt($input['ai_prompt_style'] ?? '', HSY_CONTENT::DEFAULT_PROMPT_STYLE);
             $out['name_template'] = false !== strpos($template, '{nombre}') ? $template : self::DEFAULTS['name_template'];
             $out['min_stock'] = max(0, (int) ($input['min_stock'] ?? self::DEFAULTS['min_stock']));
             $out['describe'] = empty($input['describe']) ? 0 : 1;

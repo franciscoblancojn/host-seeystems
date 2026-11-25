@@ -35,6 +35,7 @@ define("HSY_SOURCE_META", '_hsy_source_id'); // meta del producto: id en el cat�
 define("HSY_IMPORTED_META", '_hsy_imported'); // meta del producto: 'yes' si se importó del catálogo
 define("HSY_WHOLESALE_META", '_hsy_wholesale_price'); // meta del producto: precio mayorista del catálogo
 define("HSY_SHORT_AUTO_META", '_hsy_short_auto');     // meta del producto: 'yes' si la descripción corta es la lista automática
+define("HSY_STYLE_META", '_hsy_style');               // meta del producto: pending | done | none (estilo elegido por la IA)
 define("HSY_BATCH_SIZE", 5);                 // productos por petición al importar (descarga imágenes)
 define("HSY_CONTENT_BATCH", 1);              // productos por petición al generar descripciones (IA lenta)
 define("HSY_AI_COOLDOWN", 15 * 60);          // segundos de pausa de una conexión de IA sin cuota / con límite de uso

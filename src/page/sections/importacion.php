@@ -25,13 +25,6 @@
         </td>
     </tr>
     <tr>
-        <th scope="row"><label for="hsy-category">Categoría de los nuevos</label></th>
-        <td>
-            <input type="text" id="hsy-category" name="hsy[category]" value="<?= esc_attr($config['category']) ?>" class="regular-text">
-            <p class="description">Opcional (p. ej. «Relojes»; «Padre &gt; Hijo» para una subcategoría). Se crea si no existe. Vacío = sin categoría.</p>
-        </td>
-    </tr>
-    <tr>
         <th scope="row">Qué se importa</th>
         <td>
             <ul class="hsy-help">
@@ -96,6 +89,71 @@
     <tr>
         <th scope="row">Imágenes</th>
         <td><label><input type="checkbox" name="hsy[import_images]" value="1" <?php checked($config['import_images'], 1); ?>> Descargar imágenes (la primera es la destacada; las ya descargadas se reutilizan)</label></td>
+    </tr>
+</table>
+
+<h2>Categorías</h2>
+<?php
+$hsy_tree = HSY_CATEGORIES::tree();
+$hsy_map = HSY_CATEGORIES::map($config);
+$hsy_default = empty(array_filter((array) $config['category_map']));
+// Géneros: los del catálogo guardado + los habituales.
+$hsy_genders = ['DAMA' => 0, 'HOMBRE' => 0, 'UNISEX' => 0];
+foreach ((new HSY_USE_DATA_CATALOG())->items() as $hsy_it) {
+    $hsy_g = HSY_CATEGORIES::gender_key($hsy_it['attributes']['Género'] ?? '');
+    if ('' !== $hsy_g) {
+        $hsy_genders[$hsy_g] = ($hsy_genders[$hsy_g] ?? 0) + 1;
+    }
+}
+?>
+<table class="form-table" role="presentation">
+    <tr>
+        <th scope="row">Por género</th>
+        <td>
+            <?php if (!$hsy_tree) : ?>
+                <p class="fwue-message hsy-message error">La tienda no tiene categorías de producto.</p>
+            <?php else : ?>
+                <?php if ($hsy_default) : ?>
+                    <p class="fwue-message hsy-message info">Sugerencia automática (por nombre de las categorías). Revísala y guarda para fijarla.</p>
+                <?php endif; ?>
+                <div class="hsy-catmap">
+                    <?php foreach ($hsy_genders as $hsy_g => $hsy_n) : ?>
+                        <fieldset class="hsy-catmap__gender">
+                            <legend><strong><?= esc_html($hsy_g) ?></strong> <span class="hsy-muted">(<?= (int) $hsy_n ?> en el catálogo)</span></legend>
+                            <input type="hidden" name="hsy[category_map][<?= esc_attr($hsy_g) ?>][]" value="0">
+                            <div class="hsy-catmap__list">
+                                <?php foreach ($hsy_tree as $hsy_node) : $hsy_t = $hsy_node['term']; if (HSY_CATEGORIES::is_offer($hsy_t)) continue; ?>
+                                    <label style="padding-left: <?= (int) $hsy_node['depth'] * 16 ?>px">
+                                        <input type="checkbox" name="hsy[category_map][<?= esc_attr($hsy_g) ?>][]" value="<?= (int) $hsy_t->term_id ?>" <?php checked(in_array((int) $hsy_t->term_id, array_map('intval', (array) ($hsy_map[$hsy_g] ?? [])), true)); ?>>
+                                        <?= esc_html($hsy_t->name) ?>
+                                    </label>
+                                <?php endforeach; ?>
+                            </div>
+                        </fieldset>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+            <ul class="hsy-help">
+                <li>Marca las categorías de cada género del catálogo (atributo «Género»). Como en la tienda, conviene marcar la principal y la del género: <strong>Relojes + Mujer</strong>; para unisex, <strong>Relojes + Hombre + Mujer</strong>.</li>
+                <li>El <strong>estilo</strong> (Análogo, Digital, Deportivo…, las subcategorías de lo marcado) lo elige la IA: ver <strong>Descripciones → Estilo</strong>.</li>
+                <li>Se aplican al crear el producto y, en los ya importados, si «Categorías» está marcado en «Productos ya importados» (se conservan los estilos ya puestos). Las categorías de ofertas no se muestran.</li>
+            </ul>
+        </td>
+    </tr>
+    <tr>
+        <th scope="row"><label for="hsy-jewelry-words">Joyas</label></th>
+        <td>
+            <p><label>Marcas de joyas: si la marca contiene <input type="text" id="hsy-jewelry-words" name="hsy[jewelry_words]" value="<?= esc_attr($config['jewelry_words']) ?>" class="regular-text"></label></p>
+            <p><label>van a la categoría <input type="text" name="hsy[jewelry_category]" value="<?= esc_attr($config['jewelry_category']) ?>" class="regular-text"></label> → Mujer / Hombre según el género.</p>
+            <p class="description">Palabras separadas por coma, sin distinguir mayúsculas ni acentos (p. ej. «Michael Kors Joyas» contiene «joyas»). La categoría y sus subcategorías Mujer / Hombre se crean al importar la primera joya si no existen. Las joyas no llevan las categorías por género de arriba.</p>
+        </td>
+    </tr>
+    <tr>
+        <th scope="row"><label for="hsy-category">Sin regla</label></th>
+        <td>
+            <input type="text" id="hsy-category" name="hsy[category]" value="<?= esc_attr($config['category']) ?>" class="regular-text">
+            <p class="description">Opcional: categoría para los productos cuyo género no tiene ninguna marcada («Padre &gt; Hijo» para una subcategoría; se crea si no existe). Vacío = sin categoría y con aviso.</p>
+        </td>
     </tr>
 </table>
 
@@ -214,6 +272,12 @@ $hsy_preview_products = get_posts([
             <textarea id="hsy-prompt-short" name="hsy[ai_prompt_short]" rows="10" class="large-text code hsy-prompt-input"
                 data-default="<?= esc_attr(HSY_CONTENT::DEFAULT_PROMPT_SHORT) ?>"><?= esc_textarea($config['ai_prompt_short']) ?></textarea>
             <p><button type="button" class="button-link hsy-prompt-reset" data-target="#hsy-prompt-short">Restaurar el prompt por defecto</button></p>
+
+            <p><label><input type="checkbox" name="hsy[ai_style]" value="1" <?php checked($config['ai_style'], 1); ?>> <strong>Estilo:</strong> que la IA elija las subcategorías (Análogo, Digital, Deportivo…) entre las de la categoría del producto</label></p>
+            <p><label for="hsy-prompt-style"><strong>Prompt del estilo</strong></label> <span class="hsy-muted">— usa <code>{opciones}</code> con las subcategorías posibles</span></p>
+            <textarea id="hsy-prompt-style" name="hsy[ai_prompt_style]" rows="10" class="large-text code hsy-prompt-input"
+                data-default="<?= esc_attr(HSY_CONTENT::DEFAULT_PROMPT_STYLE) ?>"><?= esc_textarea($config['ai_prompt_style']) ?></textarea>
+            <p><button type="button" class="button-link hsy-prompt-reset" data-target="#hsy-prompt-style">Restaurar el prompt por defecto</button></p>
 
             <p class="description">La IA debe responder solo con el contenido del campo: texto plano (se envuelve en un párrafo) o HTML con &lt;p&gt;, &lt;h2&gt;–&lt;h4&gt;, &lt;strong&gt;, &lt;em&gt;, &lt;i&gt;, &lt;small&gt;, &lt;ul&gt;/&lt;ol&gt;/&lt;li&gt;, &lt;br&gt; y tablas (&lt;table&gt;, &lt;tr&gt;, &lt;th&gt;, &lt;td&gt;, con estilos en línea); el resto se quita. Los prompts por defecto están adaptados de los del plugin de importación desde Drive/Excel. La corta se genera después de la descripción, así que <code>{descripcion}</code> trae la recién generada. Un prompt vacío vuelve al de por defecto.</p>
         </td>

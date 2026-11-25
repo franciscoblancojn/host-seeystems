@@ -7,6 +7,25 @@ $catalog = new HSY_USE_DATA_CATALOG();
 <?php if (!HSY_USE_DATA_CONFIG::is_connected_config($config)) : ?>
     <p class="fwue-message hsy-message error">Completa la URL, el correo y la contraseña en la pestaña <strong>Conexión</strong>.</p>
 <?php else : ?>
+    <div class="hsy-stats" id="hsy-stats">
+        <?php foreach ([
+            'total' => 'Total productos',
+            'imported' => 'Importados',
+            'not_imported' => 'Pendientes de importar',
+            'with_description' => 'Con descripción',
+            'without_description' => 'Sin descripción',
+            'draft' => 'Borrador',
+        ] as $hsy_key => $hsy_label) : ?>
+            <div class="hsy-stat hsy-stat--<?= esc_attr($hsy_key) ?>">
+                <span class="hsy-stat__value" data-stat="<?= esc_attr($hsy_key) ?>">…</span>
+                <span class="hsy-stat__label"><?= esc_html($hsy_label) ?></span>
+            </div>
+        <?php endforeach; ?>
+        <div class="hsy-stat hsy-stat--action">
+            <button type="button" class="button button-primary" id="hsy-publish" disabled
+                title="Publica los productos importados que están en borrador y ya tienen descripción y descripción corta">Publicar productos con descripción (<span data-stat="publishable">0</span>)</button>
+        </div>
+    </div>
     <div class="hsy-toolbar">
         <button type="button" class="button button-primary" id="hsy-load">Cargar productos del catálogo</button>
         <span class="hsy-muted" id="hsy-fetched"><?= $catalog->fetched_at() ? esc_html('Última lectura: ' . wp_date('Y-m-d H:i', $catalog->fetched_at())) : '' ?></span>

@@ -225,3 +225,47 @@
 .hsy-page .hsy-connection__move {
 	margin-left: auto;
 }
+
+.hsy-page .hsy-stats {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin: 12px 0;
+}
+
+.hsy-page .hsy-stat {
+	display: flex;
+	flex-direction: column;
+	min-width: 100px;
+	padding: 10px 14px;
+	background: #fff;
+	border: 1px solid #dcdcde;
+	border-radius: 4px;
+}
+
+.hsy-page .hsy-stat__value {
+	font-size: 22px;
+	font-weight: 600;
+	line-height: 1.2;
+}
+
+.hsy-page .hsy-stat__label {
+	color: #646970;
+	font-size: 12px;
+}
+
+.hsy-page .hsy-stat--without_description .hsy-stat__value {
+	color: #8a2424;
+}
+
+.hsy-page .hsy-stat--with_description .hsy-stat__value {
+	color: #00703c;
+}
+
+.hsy-page .hsy-stat--action {
+	justify-content: center;
+	margin-left: auto;
+	padding: 10px;
+	background: transparent;
+	border: 0;
+}

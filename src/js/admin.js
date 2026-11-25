@@ -51,10 +51,11 @@ jQuery(function ($) {
 
     function hsy_busy(value) {
         busy = value;
-        $page.find('#hsy-load, #hsy-import-selected, #hsy-import-all, .hsy-import-one, #hsy-content-pending').prop('disabled', value);
+        $page.find('#hsy-load, #hsy-import-selected, #hsy-import-all, .hsy-import-one, #hsy-content-pending, #hsy-publish').prop('disabled', value);
         $('#hsy-spinner').toggleClass('is-active', value);
         if (!value) {
             hsy_update_count();
+            $('#hsy-publish').prop('disabled', !stats.publishable);
         }
     }
 
@@ -173,6 +174,7 @@ jQuery(function ($) {
         rows = data.rows || [];
         $('#hsy-fetched').text(data.fetched_at ? 'Última lectura: ' + data.fetched_at : '');
         hsy_set_pending(data.pending);
+        hsy_set_stats(data.stats);
         hsy_render();
     }
 
@@ -236,6 +238,73 @@ jQuery(function ($) {
         $('#hsy-content-pending').prop('disabled', busy || !count || !D.content_enabled)
             .attr('title', D.content_enabled ? '' : 'Activa la IA o la búsqueda en Google en Importación.');
     }
+
+    // ------------------------------------------------------------------ contadores y publicar
+
+    var stats = {};
+
+    function hsy_set_stats(data) {
+        if (!data) {
+            return;
+        }
+        stats = data;
+        $page.find('[data-stat]').each(function () {
+            var key = $(this).data('stat');
+            if (typeof data[key] !== 'undefined') {
+                $(this).text(Number(data[key]).toLocaleString());
+            }
+        });
+        $('#hsy-publish').prop('disabled', busy || !data.publishable);
+    }
+
+    $page.on('click', '#hsy-publish', function () {
+        if (busy) {
+            return;
+        }
+        hsy_post('publishable', {}).then(function (ids) {
+            if (!ids.length) {
+                hsy_message('#hsy-message', 'No hay borradores importados con descripción.', 'info');
+                return;
+            }
+            if (!window.confirm('¿Publicar ' + ids.length + ' productos? Pasan de borrador a publicados y se verán en la tienda.')) {
+                return;
+            }
+            var total = ids.length;
+            var count = 0;
+            var errors = 0;
+            var last = '';
+            hsy_busy(true);
+            hsy_progress(0, total);
+            hsy_message('#hsy-message', 'Publicando ' + total + ' productos…', 'info');
+
+            function next() {
+                if (!ids.length) {
+                    hsy_busy(false);
+                    hsy_message('#hsy-message', 'Publicados: ' + (total - errors) +
+                        (errors ? ', ' + errors + ' sin publicar (' + last + ').' : '.'), errors ? 'error' : 'ok');
+                    hsy_refresh_pending();
+                    return;
+                }
+                var batch = ids.splice(0, 20);
+                hsy_post('publish', { ids: batch }).then(function (results) {
+                    for (var i = 0; i < results.length; i++) {
+                        if (!results[i].ok) {
+                            errors++;
+                            last = results[i].message;
+                        }
+                    }
+                }, function (error) {
+                    errors += batch.length;
+                    last = error;
+                }).always(function () {
+                    count += batch.length;
+                    hsy_progress(count, total);
+                    next();
+                });
+            }
+            next();
+        });
+    });
 
     // Vuelve a pedir las filas (estado, descripciones y pendientes) sin leer el catálogo de origen.
     function hsy_refresh_pending() {

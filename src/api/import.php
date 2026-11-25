@@ -18,6 +18,8 @@ class HSY_API_IMPORT
         add_action('wp_ajax_hsy_content', [self::class, 'content']);
         add_action('wp_ajax_hsy_preview', [self::class, 'preview']);
         add_action('wp_ajax_hsy_ai_resume', [self::class, 'ai_resume']);
+        add_action('wp_ajax_hsy_publishable', [self::class, 'publishable']);
+        add_action('wp_ajax_hsy_publish', [self::class, 'publish']);
     }
 
     private static function guard()
@@ -51,6 +53,7 @@ class HSY_API_IMPORT
             'rows' => HSY_CATALOG_SERVICE::rows(),
             'fetched_at' => wp_date('Y-m-d H:i'),
             'pending' => count(HSY_CONTENT::pending_ids()),
+            'stats' => HSY_STATS::counts(),
         ]);
     }
 
@@ -63,6 +66,7 @@ class HSY_API_IMPORT
             'rows' => HSY_CATALOG_SERVICE::rows(),
             'fetched_at' => $catalog->fetched_at() ? wp_date('Y-m-d H:i', $catalog->fetched_at()) : '',
             'pending' => count(HSY_CONTENT::pending_ids()),
+            'stats' => HSY_STATS::counts(),
         ]);
     }
 
@@ -71,6 +75,31 @@ class HSY_API_IMPORT
     {
         self::guard();
         wp_send_json_success(HSY_CONTENT::pending_ids());
+    }
+
+    /** IDs de los productos importados en borrador que ya tienen descripción. */
+    public static function publishable()
+    {
+        self::guard();
+        wp_send_json_success(HSY_STATS::publishable_ids());
+    }
+
+    /** Publica un lote de productos (máx. HSY_STATS::PUBLISH_BATCH); cada uno se vuelve a comprobar. */
+    public static function publish()
+    {
+        self::guard();
+        $ids = array_slice(array_filter(array_map('absint', (array) wp_unslash($_POST['ids'] ?? []))), 0, HSY_STATS::PUBLISH_BATCH);
+        if (!$ids) {
+            wp_send_json_error('No hay productos.');
+        }
+        $results = [];
+        foreach ($ids as $id) {
+            $result = HSY_STATS::publish($id);
+            $results[] = is_wp_error($result)
+                ? ['product_id' => $id, 'ok' => false, 'message' => $result->get_error_message()]
+                : ['product_id' => $id, 'ok' => true];
+        }
+        wp_send_json_success($results);
     }
 
     /** Quita la pausa por límite de uso de una conexión de IA. */

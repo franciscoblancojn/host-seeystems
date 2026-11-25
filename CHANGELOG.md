@@ -4,6 +4,12 @@ Todos los cambios importantes del plugin Host Seeystems. Formato basado en [Keep
 
 > ✍️ Antes de publicar, agrega arriba una sección `## [Sin publicar]` con los cambios. `npm run push-v -- patch|minor|major` la renombra a `## [X.Y.Z] - fecha`, y no publica si esa sección no existe.
 
+## [Sin publicar]
+
+### ✨ Añadido
+- 📊 **Contadores** en la pestaña Productos: total del catálogo, importados, pendientes de importar, con descripción, sin descripción y en borrador. Se actualizan al importar, generar o publicar.
+- 🚀 Botón **«Publicar productos con descripción (N)»**: publica, por lotes y con confirmación, los productos importados que están en borrador y ya tienen descripción y descripción corta (misma regla que el badge «Pendiente de generar con IA»). Cada producto se vuelve a comprobar antes de publicarlo y queda en el log.
+
 ## [1.2.1] - 2026-11-24
 
 ### ✨ Añadido

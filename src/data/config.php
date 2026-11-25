@@ -49,7 +49,6 @@ class HSY_USE_DATA_CONFIG extends HSY_USE_DATA_BASE
         'stock' => 'Inventario',
         'attributes' => 'Características y marca',
         'images' => 'Imágenes',
-        'categories' => 'Categorías (género / joyas; se conservan los estilos)',
     ];
 
     /** Ajustes secretos: nunca se imprimen; vacío en el formulario = conservar. */

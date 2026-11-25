@@ -111,6 +111,26 @@ jQuery(function ($) {
         return '<span class="hsy-tip" tabindex="0" data-tip="' + hsy_text(text) + '">' + hsy_text(short) + '</span>';
     }
 
+    // Categorías: recortadas con tooltip; badge si la IA aún no eligió el estilo o si no tiene.
+    function hsy_categories_cell(row) {
+        if (!row.product_id) {
+            return '<span class="hsy-muted">—</span>';
+        }
+        var cats = row.categories || [];
+        var html = '';
+        if (cats.length) {
+            var text = cats.join(', ');
+            var short = text.length > 30 ? $.trim(text.slice(0, 30)) + '…' : text;
+            html = '<span class="hsy-tip" tabindex="0" data-tip="' + hsy_text(cats.join('\n')) + '">' + hsy_text(short) + '</span>';
+        } else {
+            html = '<span class="hsy-badge hsy-badge--new">Sin categoría</span>';
+        }
+        if (row.style_pending) {
+            html += (html ? '<br>' : '') + '<span class="hsy-badge hsy-badge--pending">Pendiente de asignar por IA</span>';
+        }
+        return html;
+    }
+
     function hsy_row_html(row) {
         return '<tr data-id="' + hsy_text(row.id) + '">' +
             '<th scope="row" class="check-column"><input type="checkbox" class="hsy-check" value="' + hsy_text(row.id) + '"></th>' +
@@ -125,6 +145,7 @@ jQuery(function ($) {
             (row.availability ? '<br><span class="hsy-muted">' + hsy_text(row.availability) + '</span>' : '') + '</td>' +
             '<td class="hsy-col-text">' + hsy_text_cell(row, row.description, row.description_pending) + '</td>' +
             '<td class="hsy-col-text">' + hsy_text_cell(row, row.short_description, row.short_pending) + '</td>' +
+            '<td class="hsy-col-text">' + hsy_categories_cell(row) + '</td>' +
             '<td class="hsy-col-status hsy-nowrap">' + hsy_status(row) + '</td>' +
             '<td class="hsy-col-action"><button type="button" class="button button-small hsy-import-one">' +
             (row.product_id ? 'Actualizar' : 'Importar') + '</button></td>' +
@@ -151,7 +172,7 @@ jQuery(function ($) {
         for (var i = 0; i < visible.length; i++) {
             html.push(hsy_row_html(visible[i]));
         }
-        $('#hsy-rows').html(html.length ? html.join('') : '<tr><td colspan="10">No hay productos.</td></tr>');
+        $('#hsy-rows').html(html.length ? html.join('') : '<tr><td colspan="11">No hay productos.</td></tr>');
         $('#hsy-total').text(visible.length);
         $page.find('.hsy-actions, .hsy-table').prop('hidden', !rows.length);
         $page.find('.hsy-check-all').prop('checked', false);

@@ -130,12 +130,16 @@ class HSY_CONTENT
         }
         $in = implode(',', $product_ids);
         $rows = $wpdb->get_results($wpdb->prepare(
-            "SELECT p.ID, p.post_content, p.post_excerpt, sa.meta_value AS short_auto
+            "SELECT p.ID, p.post_content, p.post_excerpt, sa.meta_value AS short_auto, st.meta_value AS style
              FROM {$wpdb->posts} p
              LEFT JOIN {$wpdb->postmeta} sa ON sa.post_id = p.ID AND sa.meta_key = %s
+             LEFT JOIN {$wpdb->postmeta} st ON st.post_id = p.ID AND st.meta_key = %s
              WHERE p.ID IN ($in)", // $in son enteros (intval)
-            HSY_SHORT_AUTO_META
+            HSY_SHORT_AUTO_META,
+            HSY_STYLE_META
         ));
+        $categories = HSY_CATEGORIES::names_for($product_ids);
+        $style_on = !empty((new HSY_USE_DATA_CONFIG())->get()['ai_style']);
         $out = [];
         foreach ($rows as $row) {
             $description = self::text($row->post_content);
@@ -144,6 +148,8 @@ class HSY_CONTENT
                 'short_description' => mb_substr(self::text($row->post_excerpt), 0, self::TEXT_MAX),
                 'description_pending' => '' === $description,
                 'short_pending' => self::short_pending_raw($row->post_excerpt, $row->short_auto),
+                'categories' => $categories[(int) $row->ID] ?? [],
+                'style_pending' => $style_on && 'pending' === $row->style,
             ];
         }
         return $out;

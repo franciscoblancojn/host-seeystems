@@ -64,6 +64,7 @@ $catalog = new HSY_USE_DATA_CATALOG();
                 <th>Inventario</th>
                 <th class="hsy-col-text">Descripción</th>
                 <th class="hsy-col-text">Descripción corta</th>
+                <th class="hsy-col-text">Categorías</th>
                 <th>Estado</th>
                 <th class="hsy-col-action"></th>
             </tr>

@@ -4,6 +4,14 @@ Todos los cambios importantes del plugin Host Seeystems. Formato basado en [Keep
 
 > ✍️ Antes de publicar, agrega arriba una sección `## [Sin publicar]` con los cambios. `npm run push-v -- patch|minor|major` la renombra a `## [X.Y.Z] - fecha`, y no publica si esa sección no existe.
 
+## [Sin publicar]
+
+### ✨ Añadido
+- 🗂️ Columna **Categorías** en la tabla de productos: las categorías del producto importado (recortadas, con tooltip), el badge «Pendiente de asignar por IA» mientras la IA no elige el estilo y «Sin categoría» si no tiene ninguna.
+
+### 🔄 Cambiado
+- 🔒 Las categorías se asignan **solo si el producto no tiene** (nuevo, o importado sin categoría / en «Sin categorizar»). Las que ya tiene, a mano o por el plugin, no se vuelven a tocar al reimportar. Se quita «Categorías» de los campos a actualizar.
+
 ## [1.3.2] - 2026-11-24
 
 ### ✨ Añadido

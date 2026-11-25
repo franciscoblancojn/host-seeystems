@@ -136,7 +136,7 @@ foreach ((new HSY_USE_DATA_CATALOG())->items() as $hsy_it) {
             <ul class="hsy-help">
                 <li>Marca las categorías de cada género del catálogo (atributo «Género»). Como en la tienda, conviene marcar la principal y la del género: <strong>Relojes + Mujer</strong>; para unisex, <strong>Relojes + Hombre + Mujer</strong>.</li>
                 <li>El <strong>estilo</strong> (Análogo, Digital, Deportivo…, las subcategorías de lo marcado) lo elige la IA: ver <strong>Descripciones → Estilo</strong>.</li>
-                <li>Se aplican al crear el producto y, en los ya importados, si «Categorías» está marcado en «Productos ya importados» (se conservan los estilos ya puestos). Las categorías de ofertas no se muestran.</li>
+                <li>Se asignan <strong>solo si el producto no tiene categorías</strong> (al crearlo, o al reimportar uno que quedó sin categoría o en «Sin categorizar»). Si ya tiene, a mano o por el plugin, <strong>no se vuelven a tocar</strong>. Las categorías de ofertas no se muestran.</li>
             </ul>
         </td>
     </tr>

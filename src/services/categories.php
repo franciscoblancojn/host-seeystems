@@ -9,7 +9,9 @@
  * - Joyas: si la marca contiene una de las palabras de jewelry_words («joyas», «joyería»…), el
  *   producto va a jewelry_category («Joyas») → Mujer / Hombre según el género; se crean si faltan.
  * - Estilo (Análogo, Digital, Deportivo…): subcategorías de las categorías asignadas. Las elige la
- *   IA en HSY_CONTENT (meta HSY_STYLE_META: pending → done | none). Al reimportar se conservan.
+ *   IA en HSY_CONTENT (meta HSY_STYLE_META: pending → done | none).
+ * - Solo se asignan si el producto no tiene categorías (has_categories): las ya asignadas, a mano o
+ *   por el plugin, no se vuelven a tocar al reimportar.
  */
 class HSY_CATEGORIES
 {
@@ -148,18 +150,40 @@ class HSY_CATEGORIES
     }
 
     /**
-     * Al reimportar con «Categorías»: las nuevas + los estilos ya puestos (hijos de las nuevas).
+     * ¿El producto ya tiene categorías? (sin contar la de por defecto, «Sin categorizar»).
+     * Si ya tiene, el plugin no las vuelve a tocar.
      */
-    public static function merge_keep_styles($current_ids, $new_ids)
+    public static function has_categories($product)
     {
-        $keep = [];
-        foreach ((array) $current_ids as $id) {
-            $term = get_term((int) $id, self::TAXONOMY);
-            if ($term instanceof WP_Term && in_array((int) $term->parent, $new_ids, true)) {
-                $keep[] = (int) $id;
+        $default = (int) get_option('default_product_cat', 0);
+        foreach ($product->get_category_ids() as $id) {
+            if ((int) $id !== $default) {
+                return true;
             }
         }
-        return array_values(array_unique(array_merge($new_ids, $keep)));
+        return false;
+    }
+
+    /**
+     * Nombres de categorías de varios productos en una consulta: [product_id => [nombres…]] (sin la de por defecto).
+     */
+    public static function names_for($product_ids)
+    {
+        $product_ids = array_filter(array_map('intval', (array) $product_ids));
+        if (!$product_ids) {
+            return [];
+        }
+        $default = (int) get_option('default_product_cat', 0);
+        $terms = wp_get_object_terms($product_ids, self::TAXONOMY, ['fields' => 'all_with_object_id', 'orderby' => 'parent']);
+        $out = [];
+        if (!is_wp_error($terms)) {
+            foreach ($terms as $term) {
+                if ((int) $term->term_id !== $default) {
+                    $out[(int) $term->object_id][] = $term->name;
+                }
+            }
+        }
+        return $out;
     }
 
     /**

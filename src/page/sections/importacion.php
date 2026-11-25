@@ -178,7 +178,7 @@ $hsy_preview_products = get_posts([
                 data-default="<?= esc_attr(HSY_CONTENT::DEFAULT_PROMPT_SHORT) ?>"><?= esc_textarea($config['ai_prompt_short']) ?></textarea>
             <p><button type="button" class="button-link hsy-prompt-reset" data-target="#hsy-prompt-short">Restaurar el prompt por defecto</button></p>
 
-            <p class="description">La IA debe responder solo con el HTML del campo (se permiten &lt;p&gt;, &lt;strong&gt;, &lt;em&gt;, &lt;ul&gt;/&lt;ol&gt;/&lt;li&gt;, &lt;h3&gt;/&lt;h4&gt;, &lt;br&gt;; el resto se quita). La corta se genera después de la descripción, así que <code>{descripcion}</code> trae la recién generada. Un prompt vacío vuelve al de por defecto.</p>
+            <p class="description">La IA debe responder solo con el contenido del campo: texto plano (se envuelve en un párrafo) o HTML con &lt;p&gt;, &lt;h2&gt;–&lt;h4&gt;, &lt;strong&gt;, &lt;em&gt;, &lt;i&gt;, &lt;small&gt;, &lt;ul&gt;/&lt;ol&gt;/&lt;li&gt;, &lt;br&gt; y tablas (&lt;table&gt;, &lt;tr&gt;, &lt;th&gt;, &lt;td&gt;, con estilos en línea); el resto se quita. Los prompts por defecto están adaptados de los del plugin de importación desde Drive/Excel. La corta se genera después de la descripción, así que <code>{descripcion}</code> trae la recién generada. Un prompt vacío vuelve al de por defecto.</p>
         </td>
     </tr>
     <tr>

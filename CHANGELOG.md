@@ -4,6 +4,15 @@ Todos los cambios importantes del plugin Host Seeystems. Formato basado en [Keep
 
 > ✍️ Antes de publicar, agrega arriba una sección `## [Sin publicar]` con los cambios. `npm run push-v -- patch|minor|major` la renombra a `## [X.Y.Z] - fecha`, y no publica si esa sección no existe.
 
+## [Sin publicar]
+
+### ✨ Añadido
+- 🧩 Variables nuevas para los prompts: `{contexto}` (todos los datos del producto que existan, uno por línea: referencia, nombre, marca, info de la marca, características e información de la web; los vacíos se omiten), `{info_marca}` (descripción de la marca) y `{tienda}` (nombre del sitio).
+
+### 🔄 Cambiado
+- ✍️ Prompts por defecto adaptados de los del plugin de importación desde Drive/Excel: descripción larga en HTML con párrafo inicial, «Beneficios principales», «Características del producto» y «Especificaciones técnicas» en tablas y cierre comercial con `{tienda}`; descripción corta en texto plano, una frase de máximo 200 caracteres que termina con «Ref. {referencia}». Los prompts personalizados guardados no cambian.
+- 🏷️ HTML permitido en lo que devuelve la IA: se añaden `<h2>`, `<i>`, `<small>` y tablas (`<table>`, `<tr>`, `<th>`, `<td>`, con estilos en línea).
+
 ## [1.2.0] - 2026-11-24
 
 ### ✨ Añadido

@@ -26,11 +26,21 @@ class HSY_CONTENT
         'br' => [],
         'strong' => [],
         'em' => [],
+        'i' => [],
+        'small' => [],
         'ul' => [],
         'ol' => [],
         'li' => [],
+        'h2' => [],
         'h3' => [],
         'h4' => [],
+        // Tablas de características / especificaciones, con estilos en línea (wp_kses filtra el CSS).
+        'table' => ['style' => true],
+        'thead' => [],
+        'tbody' => [],
+        'tr' => ['style' => true],
+        'th' => ['style' => true, 'colspan' => true],
+        'td' => ['style' => true, 'colspan' => true],
     ];
 
     /** ¿Está el plugin IA Conector activo? */
@@ -172,42 +182,87 @@ class HSY_CONTENT
         'info_web' => 'Texto encontrado en Google con la referencia (vacío si no hay o si la búsqueda está apagada)',
         'fuente_web' => 'URL de donde salió {info_web}',
         'descripcion' => 'Descripción del producto (la recién generada o la que ya tenía; útil en el prompt de la corta)',
+        'info_marca' => 'Descripción de la marca (la de la marca en Productos → Marcas)',
+        'tienda' => 'Nombre de la tienda (Ajustes → Generales → Título del sitio)',
+        'contexto' => 'Todos los datos del producto que existan, uno por línea (referencia, nombre, marca, info de la marca, características e información de la web); los vacíos se omiten',
     ];
 
-    const DEFAULT_PROMPT_DESCRIPTION = "Eres redactor de fichas de producto para una tienda online en español.
-Escribe la descripción del producto {marca} {nombre} (referencia {referencia}).
+    // Prompts por defecto (adaptados de los del plugin de importación desde Drive/Excel del mismo autor).
+    const DEFAULT_PROMPT_DESCRIPTION = "Eres un especialista senior en contenido para ecommerce, SEO orgánico, GEO, búsqueda por IA, búsqueda por voz, WooCommerce y conversión.
 
-Datos del producto (fuente fiable):
-- Nombre: {nombre}
-- Marca: {marca}
-{caracteristicas}
+Genera SOLO la descripción larga del producto en HTML limpio.
 
-Información encontrada en la web (puede ser de otra tienda; si está vacía, ignórala; úsala solo como referencia y reescríbela, no la copies):
-{info_web}
+OBJETIVO:
+Crear una descripción enriquecida, clara, confiable y optimizada para motores de búsqueda tradicionales, Google AI, Gemini, ChatGPT, Copilot, Perplexity y asistentes de voz.
 
-Reglas:
-- No inventes características técnicas que no estén en los datos o en la información de la web (movimiento, materiales, resistencia, garantía…).
-- No menciones precios, descuentos, stock, envíos ni el nombre de ninguna tienda.
-- Español neutro, tono comercial y claro, sin exageraciones ni emojis.
-- Formato: 2 o 3 párrafos en HTML con <p>; puedes usar <strong> y una lista <ul><li> con las características.
+REGLAS OBLIGATORIAS:
+- No coloques el precio.
+- Usa únicamente los datos entregados en CONTEXTO.
+- No inventes información técnica.
+- Si falta un dato, omítelo.
+- No menciones datos no confirmados.
+- No uses frases genéricas como 'el mejor', 'alta calidad' o 'producto increíble'.
+- No repitas información.
+- No uses JavaScript.
+- HTML permitido: <h2>, <h3>, <p>, <strong>, <small>, <i>, <ul>, <li>, <table>, <tr>, <th>, <td>.
+- Extensión máxima: 1000 caracteres.
+- Lenguaje comercial, natural y profesional.
+- Optimiza para SEO, GEO, IA y búsqueda por voz.
+- Responde de forma natural: qué es, para qué sirve, para quién es, beneficios y características.
 
-Responde solo con el HTML de la descripción, sin explicaciones ni bloques de código.";
+ESTRUCTURA OBLIGATORIA:
 
-    const DEFAULT_PROMPT_SHORT = "Eres redactor de fichas de producto para una tienda online en español.
-Escribe la descripción corta del producto {marca} {nombre} (referencia {referencia}).
+1. Primer párrafo:
+Describe qué es el producto, para quién está diseñado y cuál es su principal beneficio.
 
-Datos del producto:
-{caracteristicas}
+2. Sección:
+<h2>Beneficios principales</h2>
+Incluye 3 a 5 beneficios reales basados en el contexto.
 
-Descripción completa del producto (resúmela si existe):
-{descripcion}
+3. Sección:
+<h2>Características del producto</h2>
+Explica materiales, diseño, uso, resistencia, garantía, marca o funcionalidad solo si existen en el contexto.
+Usa una tabla para mostrar las características, y usa estilos y emojis para una mejor presentación.
 
-Reglas:
-- 1 o 2 frases, máximo 300 caracteres, en un solo <p>.
-- No inventes datos ni menciones precios, stock ni tiendas.
-- Sin emojis.
+4. Sección:
+<h2>Especificaciones técnicas</h2>
+Crea una tabla HTML solo con los datos disponibles.
+Usa estilos y emojis para una mejor presentación.
+No incluyas filas vacías.
 
-Responde solo con el HTML, sin explicaciones ni bloques de código.";
+5. Cierre comercial:
+Incluye una frase natural de confianza para comprar en {tienda}, mencionando originalidad, compra segura, envío en Colombia, IVA incluido o financiación solo si aplica según el contexto.
+
+CONTEXTO DEL PRODUCTO:
+{contexto}
+
+SALIDA:
+Devuelve únicamente el HTML final de la descripción larga.";
+
+    const DEFAULT_PROMPT_SHORT = "Eres un especialista senior en contenido para ecommerce, SEO orgánico, búsqueda por IA y WooCommerce.
+
+ADVERTENCIA: Si incluyes HTML, títulos, listas, emojis, comillas o cualquier formato que no sea texto plano, la respuesta será RECHAZADA automáticamente.
+
+Genera ÚNICAMENTE la descripción corta del producto en una sola frase.
+
+REGLAS OBLIGATORIAS (incumplirlas invalida la respuesta):
+- No coloques el precio.
+- Una sola frase.
+- Máximo 200 caracteres.
+- Texto plano. SIN HTML. SIN etiquetas. SIN títulos. SIN emojis. SIN comillas. SIN listas.
+- No inventes información. Usa solo los datos del CONTEXTO.
+- Si falta un dato, omítelo.
+- Debe ser comercial, clara, natural y persuasiva.
+- Incluye el nombre o tipo de producto.
+- Menciona el beneficio principal.
+- Incluye marca, material, uso o característica destacada solo si existe en el contexto.
+- Finaliza obligatoriamente con: Ref. {referencia}
+- NO finalices con puntos suspensivos (...).
+
+CONTEXTO DEL PRODUCTO:
+{contexto}
+
+SALIDA (texto plano, una sola línea, sin formato):";
 
     /**
      * Completa lo pendiente de un producto. Devuelve ['fields' => [...], 'source' => ..., 'warnings' => [...]] o WP_Error.
@@ -341,6 +396,40 @@ Responde solo con el HTML, sin explicaciones ni bloques de código.";
         }
         $current = null === $description ? $product->get_description() : $description;
 
+        // Descripción de la marca (primera marca con descripción).
+        $brand_info = '';
+        if (taxonomy_exists('product_brand')) {
+            foreach ((array) wp_get_post_terms($product->get_id(), 'product_brand') as $term) {
+                if ($term instanceof WP_Term && '' !== trim($term->description)) {
+                    $brand_info = self::text($term->description);
+                    break;
+                }
+            }
+        }
+        $name = '' !== $source_name ? $source_name : $product->get_name();
+        $brand = is_array($brands) && $brands ? implode(', ', $brands) : '';
+        // {contexto}: solo los datos que existen, como «Etiqueta: valor».
+        $context = [];
+        foreach ([
+            'Referencia' => $product->get_sku(),
+            'Nombre' => $name,
+            'Marca' => $brand,
+            'Info marca' => $brand_info,
+        ] as $label => $value) {
+            if ('' !== trim((string) $value)) {
+                $context[] = $label . ': ' . $value;
+            }
+        }
+        foreach ($lines as $line) {
+            $line = ltrim($line, '- ');
+            if (0 !== stripos($line, 'Referencia:')) { // ya está arriba (SKU)
+                $context[] = $line;
+            }
+        }
+        if ($web) {
+            $context[] = 'Información encontrada en la web (' . $web['source'] . '): ' . $web['text'];
+        }
+
         return [
             'nombre' => '' !== $source_name ? $source_name : $product->get_name(),
             'nombre_tienda' => $product->get_name(),
@@ -355,6 +444,9 @@ Responde solo con el HTML, sin explicaciones ni bloques de código.";
             'info_web' => $web ? $web['text'] : '',
             'fuente_web' => $web ? $web['source'] : '',
             'descripcion' => self::text($current),
+            'info_marca' => $brand_info,
+            'tienda' => wp_specialchars_decode(get_bloginfo('name'), ENT_QUOTES),
+            'contexto' => implode("\n", $context),
         ];
     }
 
@@ -504,7 +596,8 @@ Responde solo con el HTML, sin explicaciones ni bloques de código.";
      */
     public static function text($html)
     {
-        $html = preg_replace('#<br\s*/?>|</(p|li|h[1-6]|ul|ol)>#i', "\n", (string) $html);
+        $html = preg_replace('#<br\s*/?>|</(p|li|h[1-6]|ul|ol|tr|table)>#i', "\n", (string) $html);
+        $html = preg_replace('#</t[hd]>#i', ' ', $html);
         $html = preg_replace('#<li[^>]*>#i', '- ', $html);
         $text = html_entity_decode(wp_strip_all_tags($html), ENT_QUOTES, 'UTF-8');
         return trim(preg_replace("/\n\s*\n+/", "\n", preg_replace('/[ \t]+/', ' ', $text)));

@@ -4,7 +4,7 @@ Todos los cambios importantes del plugin Host Seeystems. Formato basado en [Keep
 
 > ✍️ Antes de publicar, agrega arriba una sección `## [Sin publicar]` con los cambios. `npm run push-v -- patch|minor|major` la renombra a `## [X.Y.Z] - fecha`, y no publica si esa sección no existe.
 
-## [Sin publicar]
+## [1.3.0] - 2026-11-24
 
 ### ✨ Añadido
 - 📊 **Contadores** en la pestaña Productos: total del catálogo, importados, pendientes de importar, con descripción, sin descripción y en borrador. Se actualizan al importar, generar o publicar.

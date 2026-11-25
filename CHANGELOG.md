@@ -4,7 +4,7 @@ Todos los cambios importantes del plugin Host Seeystems. Formato basado en [Keep
 
 > ✍️ Antes de publicar, agrega arriba una sección `## [Sin publicar]` con los cambios. `npm run push-v -- patch|minor|major` la renombra a `## [X.Y.Z] - fecha`, y no publica si esa sección no existe.
 
-## [Sin publicar]
+## [1.3.2] - 2026-11-24
 
 ### ✨ Añadido
 - 🗂️ **Categorías por género** (Importación → Categorías): para cada género del catálogo (DAMA, HOMBRE, UNISEX…) se marcan las categorías de la tienda. Sugerencia automática por nombre: DAMA → Relojes + Mujer, HOMBRE → Relojes + Hombre, UNISEX → Relojes + Hombre + Mujer. Las de ofertas no se muestran.

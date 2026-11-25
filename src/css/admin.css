@@ -269,3 +269,19 @@
 	background: transparent;
 	border: 0;
 }
+
+.hsy-page .hsy-brands {
+	max-width: 760px;
+}
+
+.hsy-page .hsy-badge--new {
+	background: #fcf9e8;
+	color: #614200;
+	border: 1px solid #f0d78c;
+}
+
+.hsy-page .hsy-badge--similar {
+	background: #f0f6fc;
+	color: #0a4b78;
+	border: 1px solid #b4d0eb;
+}

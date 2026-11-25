@@ -35,13 +35,50 @@
         <th scope="row">Qué se importa</th>
         <td>
             <ul class="hsy-help">
-                <li><strong>Marca</strong> → marca del producto (<code>product_brand</code>). Si no existe se crea en formato normal: «ARMANI EXCHANGE» → «Armani Exchange».</li>
+                <li><strong>Marca</strong> → marca del producto (<code>product_brand</code>): la marca equivalente de la tienda (ver «Marcas del catálogo»); si no hay, se crea en formato normal: «ARMANI EXCHANGE» → «Armani Exchange».</li>
                 <li><strong>Nombre</strong> → nombre del producto según la plantilla (nombre, género, marca y referencia). <strong>Referencia</strong> → SKU.</li>
                 <li><strong>Características</strong> (Género, Correa, Caja, Tamaño, Resistencia al agua, Referencia) → atributos visibles. También como descripción corta provisional, hasta que se genere la definitiva (ver <strong>Descripciones</strong>).</li>
                 <li><strong>PVP sugerido</strong> → precio normal. El precio rebajado no se toca.</li>
                 <li><strong>Precio mayorista</strong> → meta <code><?= esc_html(HSY_WHOLESALE_META) ?></code>, se actualiza en cada importación y se ve en el editor del producto, junto a los precios.</li>
                 <li>Todos los productos importados llevan la meta <code><?= esc_html(HSY_IMPORTED_META) ?> = yes</code>.</li>
             </ul>
+        </td>
+    </tr>
+    <tr>
+        <th scope="row">Marcas del catálogo</th>
+        <td>
+            <?php $hsy_brands = HSY_BRANDS::catalog_report(); ?>
+            <?php if (!HSY_BRANDS::available()) : ?>
+                <p class="fwue-message hsy-message error">La tienda no tiene la taxonomía de marcas (<code>product_brand</code>): los productos se importan sin marca.</p>
+            <?php elseif (!$hsy_brands) : ?>
+                <p class="description">Carga el catálogo (pestaña Productos) para ver sus marcas.</p>
+            <?php else : ?>
+                <table class="widefat striped hsy-brands">
+                    <thead>
+                        <tr><th>Marca en el catálogo</th><th>Productos</th><th>Marca en la tienda</th></tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($hsy_brands as $hsy_b) : ?>
+                            <tr>
+                                <td><?= esc_html($hsy_b['brand']) ?></td>
+                                <td><?= (int) $hsy_b['products'] ?></td>
+                                <td>
+                                    <?php if (!$hsy_b['term']) : ?>
+                                        <span class="hsy-badge hsy-badge--new">Se creará «<?= esc_html($hsy_b['brand']) ?>»</span>
+                                    <?php else : ?>
+                                        <a href="<?= esc_url(get_edit_term_link($hsy_b['term']->term_id, HSY_BRANDS::TAXONOMY, 'product')) ?>" target="_blank"><?= esc_html($hsy_b['term']->name) ?></a>
+                                        <span class="hsy-muted">(#<?= (int) $hsy_b['term']->term_id ?>, <?= esc_html($hsy_b['term']->slug) ?>, <?= (int) $hsy_b['term']->count ?> productos)</span>
+                                        <?php if (!$hsy_b['exact']) : ?>
+                                            <span class="hsy-badge hsy-badge--similar" title="El nombre no es idéntico, pero es la misma marca sin contar mayúsculas, acentos, espacios, signos ni palabras como «reloj».">Equivalente</span>
+                                        <?php endif; ?>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+                <p class="description">Cada marca del catálogo se asigna a la marca de la tienda equivalente: se ignoran mayúsculas, acentos, espacios, signos y palabras como «reloj», «relojes» o «relog»; otras palabras sí cuentan («Michael Kors Joyas» es distinta de «Michael Kors»). Primero se busca por nombre y después por slug; si hay varias, la que tiene más productos. Si no hay ninguna, se crea al importar.</p>
+            <?php endif; ?>
         </td>
     </tr>
     <tr>

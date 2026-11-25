@@ -114,7 +114,7 @@ class HSY_IMPORTER
         $product_id = $product->save();
 
         if ($has('attributes') && '' !== $item['brand']) {
-            $brand = self::set_brand($product_id, $item['brand']);
+            $brand = HSY_BRANDS::assign($product_id, $item['brand']);
             if (is_wp_error($brand)) {
                 $warnings[] = $brand->get_error_message();
             }
@@ -189,33 +189,6 @@ class HSY_IMPORTER
         ]);
         $name = trim(preg_replace('/\s+/', ' ', $name));
         return '' !== $name ? $name : $item['name'];
-    }
-
-    /**
-     * Marca en la taxonomía product_brand (WooCommerce 9.6+ o el tema). Se reutiliza la existente
-     * sin distinguir mayúsculas; si no existe se crea con el nombre normalizado («Armani Exchange»).
-     */
-    private static function set_brand($product_id, $brand)
-    {
-        if (!taxonomy_exists('product_brand')) {
-            return new WP_Error('hsy_brand', 'No existe la taxonomía de marcas (product_brand): la marca ' . $brand . ' no se asignó.');
-        }
-        $term = get_term_by('slug', sanitize_title($brand), 'product_brand');
-        if (!$term) {
-            $term = get_term_by('name', $brand, 'product_brand'); // la comparación de MySQL no distingue mayúsculas
-        }
-        if (!$term) {
-            $created = wp_insert_term($brand, 'product_brand');
-            if (is_wp_error($created)) {
-                return $created;
-            }
-            HSY_LOG_SERVICE::add('marca_creada', ['marca' => $brand, 'term_id' => $created['term_id']]);
-            $term_id = (int) $created['term_id'];
-        } else {
-            $term_id = (int) $term->term_id;
-        }
-        $set = wp_set_object_terms($product_id, [$term_id], 'product_brand');
-        return is_wp_error($set) ? $set : $term_id;
     }
 
     /**

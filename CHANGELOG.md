@@ -4,7 +4,7 @@ Todos los cambios importantes del plugin Host Seeystems. Formato basado en [Keep
 
 > ✍️ Antes de publicar, agrega arriba una sección `## [Sin publicar]` con los cambios. `npm run push-v -- patch|minor|major` la renombra a `## [X.Y.Z] - fecha`, y no publica si esa sección no existe.
 
-## [Sin publicar]
+## [1.4.2] - 2026-11-25
 
 ### ✨ Añadido
 - 🔗 Al actualizar el **nombre** de un producto ya importado, la **URL** (slug) se regenera con el nombre nuevo (solo si el nombre cambió) y queda en el log (`url_cambiada`).

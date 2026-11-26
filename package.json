@@ -1,6 +1,6 @@
 {
   "name": "host-seeystems",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "private": true,
   "description": "Conecta con un catálogo B2B externo mediante usuario y clave y permite importar sus productos a WooCommerce, de forma individual o masiva.",
   "scripts": {

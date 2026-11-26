@@ -27,6 +27,55 @@ class HSY_PARSER
         return '' === $name ? '' : mb_convert_case(mb_strtolower($name, 'UTF-8'), MB_CASE_TITLE, 'UTF-8');
     }
 
+    /**
+     * Lista HTML de características («<ul><li><strong>Género:</strong> DAMA</li>…»): la descripción corta provisional.
+     */
+    public static function list_html($attributes)
+    {
+        $list = '';
+        foreach ((array) $attributes as $name => $value) {
+            $list .= '<li><strong>' . esc_html($name) . ':</strong> ' . esc_html($value) . '</li>';
+        }
+        return $list ? '<ul>' . $list . '</ul>' : '';
+    }
+
+    /**
+     * Características de una joya. El catálogo usa los campos de reloj (Correa / Caja) para el material
+     * y el color: «Caja: Acero, Plateado» → Material «Acero», Color «Plateado». Se quitan Correa, Caja y
+     * Resistencia al agua, que no aplican a aretes, collares o pulseras.
+     */
+    public static function jewelry_attributes($attributes)
+    {
+        $attributes = (array) $attributes;
+        $material = '';
+        $color = '';
+        $caja = trim((string) ($attributes['Caja'] ?? ''));
+        if (false !== strpos($caja, ',')) {
+            list($material, $color) = array_map('trim', explode(',', $caja, 2));
+        } elseif ('' !== $caja) {
+            $material = $caja;
+        } elseif ('' !== trim((string) ($attributes['Correa'] ?? ''))) {
+            $material = trim((string) $attributes['Correa']);
+        }
+        $out = [];
+        foreach ($attributes as $name => $value) {
+            if (in_array($name, ['Correa', 'Caja', 'Resistencia al agua'], true)) {
+                continue;
+            }
+            $out[$name] = $value;
+            if ('Género' === $name) {
+                // Material y Color justo después del género, como estaban Correa y Caja.
+                $out['Material'] = $material;
+                $out['Color'] = $color;
+            }
+        }
+        if (!isset($out['Material'])) {
+            $out['Material'] = $material;
+            $out['Color'] = $color;
+        }
+        return array_filter($out, 'strlen');
+    }
+
     private static function upper($text)
     {
         return mb_strtoupper(trim((string) $text), 'UTF-8');
@@ -93,10 +142,7 @@ class HSY_PARSER
             'Referencia' => $text('ref'),
         ], 'strlen');
 
-        $list = '';
-        foreach ($attributes as $name => $value) {
-            $list .= '<li><strong>' . esc_html($name) . ':</strong> ' . esc_html($value) . '</li>';
-        }
+        $list = self::list_html($attributes);
 
         $pvp = (float) ($d['pvp'] ?? 0);
         $wholesale = (float) ($d['precio'] ?? 0);
@@ -114,7 +160,7 @@ class HSY_PARSER
             'name' => $text('nombre'),
             'brand' => self::brand_name($text('marca')),
             'description' => $is_label ? '' : $label,
-            'short_description' => $list ? '<ul>' . $list . '</ul>' : '',
+            'short_description' => $list,
             'pvp' => $pvp > 0 ? $pvp : null,
             'wholesale' => $wholesale > 0 ? $wholesale : null,
             'price_type' => $text('tipo_precio'),

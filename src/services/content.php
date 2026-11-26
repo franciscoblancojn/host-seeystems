@@ -195,8 +195,11 @@ class HSY_CONTENT
         'marca' => 'Marca (Armani Exchange)',
         'referencia' => 'Referencia / SKU (AX7186SET)',
         'genero' => 'Género (DAMA)',
-        'correa' => 'Correa (Acero Dorado)',
-        'caja' => 'Caja (Acero, Dorado)',
+        'tipo_producto' => 'Tipo de producto: «Reloj» o, en joyas, su nombre + «(joya)» («Aretes (joya)»)',
+        'material' => 'Material (solo joyas: «Acero»)',
+        'color' => 'Color (solo joyas: «Plateado»)',
+        'correa' => 'Correa (Acero Dorado; vacío en joyas)',
+        'caja' => 'Caja (Acero, Dorado; vacío en joyas)',
         'tamano' => 'Tamaño (27 mm)',
         'resistencia_agua' => 'Resistencia al agua',
         'caracteristicas' => 'Todas las características, una por línea («- Género: DAMA»)',
@@ -224,6 +227,7 @@ REGLAS OBLIGATORIAS:
 - Si falta un dato, omítelo.
 - No menciones datos no confirmados.
 - No uses frases genéricas como 'el mejor', 'alta calidad' o 'producto increíble'.
+- Incluye SOLO características que correspondan al TIPO DE PRODUCTO del contexto. Omite las que no tengan sentido para ese tipo aunque aparezcan en el contexto (por ejemplo, correa, caja, esfera o resistencia al agua en aretes, collares, pulseras o anillos; en las joyas habla de material, color, tamaño y diseño).
 - No repitas información.
 - No uses JavaScript.
 - HTML permitido: <h2>, <h3>, <p>, <strong>, <small>, <i>, <ul>, <li>, <table>, <tr>, <th>, <td>.
@@ -292,6 +296,7 @@ REGLAS OBLIGATORIAS (incumplirlas invalida la respuesta):
 - Incluye el nombre o tipo de producto.
 - Menciona el beneficio principal.
 - Incluye marca, material, uso o característica destacada solo si existe en el contexto.
+- Usa solo características que correspondan al TIPO DE PRODUCTO (en joyas no hables de correa, caja ni esfera).
 - Finaliza obligatoriamente con: Ref. {referencia}
 - NO finalices con puntos suspensivos (...).
 
@@ -301,9 +306,9 @@ CONTEXTO DEL PRODUCTO:
 SALIDA (texto plano, una sola línea, sin formato):";
 
     /**
-     * Completa lo pendiente de un producto. Devuelve ['fields' => [...], 'source' => ..., 'warnings' => [...]] o WP_Error.
+     * Completa lo pendiente de un producto; con $force (Regenerar) reescribe la descripción y la corta. Devuelve ['fields' => [...], 'source' => ..., 'warnings' => [...]] o WP_Error.
      */
-    public static function fill($product_id, $config = null)
+    public static function fill($product_id, $config = null, $force = false)
     {
         $config = $config ?: (new HSY_USE_DATA_CONFIG())->get();
         $product = wc_get_product($product_id);
@@ -311,15 +316,16 @@ SALIDA (texto plano, una sola línea, sin formato):";
             return new WP_Error('hsy_content_product', 'El producto #' . (int) $product_id . ' no es un producto importado.');
         }
         $need_style = self::style_pending($product, $config) && self::ai_enabled($config);
-        if (!self::is_pending($product) && !$need_style) {
+        if (!$force && !self::is_pending($product) && !$need_style) {
             return ['fields' => [], 'source' => '', 'warnings' => []];
         }
         if (!self::enabled($config)) {
             return new WP_Error('hsy_content_off', 'No hay generador de descripciones: activa la IA o la búsqueda en Google en Importación.');
         }
 
-        $need_description = '' === trim(wp_strip_all_tags($product->get_description()));
-        $need_short = self::short_pending($product);
+        // $force (Regenerar): reescribe las dos descripciones aunque ya existan (también las editadas a mano).
+        $need_description = $force || '' === trim(wp_strip_all_tags($product->get_description()));
+        $need_short = $force || self::short_pending($product);
         $web = self::web($product, $config);
         $warnings = $web['warnings'];
         $web = $web['web'];
@@ -452,14 +458,23 @@ SALIDA (texto plano, una sola línea, sin formato):";
     public static function variables($product, $web = null, $description = null)
     {
         $brands = taxonomy_exists('product_brand') ? wp_get_post_terms($product->get_id(), 'product_brand', ['fields' => 'names']) : [];
-        $attrs = [];
-        $lines = [];
+        $config = (new HSY_USE_DATA_CONFIG())->get();
+        $by_name = [];
         foreach ($product->get_attributes() as $attribute) {
             if ($attribute instanceof WC_Product_Attribute && !$attribute->is_taxonomy()) {
-                $value = implode(', ', $attribute->get_options());
-                $attrs[sanitize_title($attribute->get_name())] = $value;
-                $lines[] = '- ' . $attribute->get_name() . ': ' . $value;
+                $by_name[$attribute->get_name()] = implode(', ', $attribute->get_options());
             }
+        }
+        // Joyas: aunque el producto se importara con Correa / Caja, a la IA le llegan Material / Color.
+        $is_jewelry = HSY_CATEGORIES::is_jewelry(is_array($brands) ? implode(' ', $brands) : '', $config);
+        if ($is_jewelry) {
+            $by_name = HSY_PARSER::jewelry_attributes($by_name);
+        }
+        $attrs = [];
+        $lines = [];
+        foreach ($by_name as $label => $value) {
+            $attrs[sanitize_title($label)] = $value;
+            $lines[] = '- ' . $label . ': ' . $value;
         }
         // Nombre del catálogo: meta (productos importados desde 1.1) o el catálogo guardado (anteriores).
         $source_name = (string) $product->get_meta('_hsy_source_name');
@@ -481,9 +496,12 @@ SALIDA (texto plano, una sola línea, sin formato):";
         }
         $name = '' !== $source_name ? $source_name : $product->get_name();
         $brand = is_array($brands) && $brands ? implode(', ', $brands) : '';
+        // Tipo de producto: «Reloj» (ajuste type_watch) o, en joyas, el nombre del catálogo («Aretes») + «(joya)».
+        $type = $is_jewelry ? trim($name . ' (joya)') : (trim((string) $config['type_watch']) ?: 'Reloj');
         // {contexto}: solo los datos que existen, como «Etiqueta: valor».
         $context = [];
         foreach ([
+            'Tipo de producto' => $type,
             'Referencia' => $product->get_sku(),
             'Nombre' => $name,
             'Marca' => $brand,
@@ -509,6 +527,9 @@ SALIDA (texto plano, una sola línea, sin formato):";
             'marca' => is_array($brands) && $brands ? implode(', ', $brands) : '',
             'referencia' => $product->get_sku(),
             'genero' => $attrs['genero'] ?? '',
+            'tipo_producto' => $type,
+            'material' => $attrs['material'] ?? '',
+            'color' => $attrs['color'] ?? '',
             'correa' => $attrs['correa'] ?? '',
             'caja' => $attrs['caja'] ?? '',
             'tamano' => $attrs['tamano'] ?? '',

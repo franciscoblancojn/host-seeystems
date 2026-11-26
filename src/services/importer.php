@@ -44,6 +44,11 @@ class HSY_IMPORTER
     {
         $config = $config ?: (new HSY_USE_DATA_CONFIG())->get();
         $item = self::normalize($item);
+        // Joyas: Material / Color en vez de Correa / Caja (campos de reloj que el catálogo reutiliza).
+        if (HSY_CATEGORIES::is_jewelry($item['brand'], $config)) {
+            $item['attributes'] = HSY_PARSER::jewelry_attributes($item['attributes']);
+            $item['short_description'] = HSY_PARSER::list_html($item['attributes']);
+        }
         if ('' === $item['id'] || '' === $item['name']) {
             return new WP_Error('hsy_item', 'Producto sin id o sin nombre en el catálogo.');
         }

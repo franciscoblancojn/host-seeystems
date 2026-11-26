@@ -141,10 +141,11 @@ class HSY_API_IMPORT
         if (function_exists('set_time_limit')) {
             @set_time_limit(180);
         }
+        $force = !empty($_POST['force']); // Regenerar: reescribe aunque ya tenga descripción
         $config = (new HSY_USE_DATA_CONFIG())->get();
         $results = [];
         foreach ($ids as $id) {
-            $result = HSY_CONTENT::fill($id, $config);
+            $result = HSY_CONTENT::fill($id, $config, $force);
             $results[] = is_wp_error($result)
                 ? ['product_id' => $id, 'ok' => false, 'message' => $result->get_error_message()]
                 : ['product_id' => $id, 'ok' => true, 'fields' => $result['fields'], 'source' => $result['source'], 'message' => implode(' · ', $result['warnings'])];

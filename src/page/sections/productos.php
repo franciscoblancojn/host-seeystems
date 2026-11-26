@@ -41,6 +41,7 @@ $catalog = new HSY_USE_DATA_CATALOG();
             <option value="imported">Ya importados</option>
         </select>
         <button type="button" class="button" id="hsy-import-selected" disabled>Importar seleccionados (<span id="hsy-selected-count">0</span>)</button>
+        <button type="button" class="button" id="hsy-regenerate-selected" disabled title="Vuelve a generar con IA la descripción y la descripción corta de los productos ya importados seleccionados">Regenerar descripciones (<span id="hsy-regenerate-count">0</span>)</button>
         <button type="button" class="button" id="hsy-import-all">Importar todos los visibles</button>
         <span class="hsy-muted"><span id="hsy-total">0</span> productos</span>
     </div>

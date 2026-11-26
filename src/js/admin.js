@@ -51,7 +51,7 @@ jQuery(function ($) {
 
     function hsy_busy(value) {
         busy = value;
-        $page.find('#hsy-load, #hsy-import-selected, #hsy-import-all, .hsy-import-one, #hsy-content-pending, #hsy-publish').prop('disabled', value);
+        $page.find('#hsy-load, #hsy-import-selected, #hsy-import-all, .hsy-import-one, .hsy-regenerate-one, #hsy-regenerate-selected, #hsy-content-pending, #hsy-publish').prop('disabled', value);
         $('#hsy-spinner').toggleClass('is-active', value);
         if (!value) {
             hsy_update_count();
@@ -148,7 +148,9 @@ jQuery(function ($) {
             '<td class="hsy-col-text">' + hsy_categories_cell(row) + '</td>' +
             '<td class="hsy-col-status hsy-nowrap">' + hsy_status(row) + '</td>' +
             '<td class="hsy-col-action"><button type="button" class="button button-small hsy-import-one">' +
-            (row.product_id ? 'Actualizar' : 'Importar') + '</button></td>' +
+            (row.product_id ? 'Actualizar' : 'Importar') + '</button>' +
+            (row.product_id ? '<button type="button" class="button button-small hsy-regenerate-one" title="Vuelve a generar con IA la descripción y la descripción corta (reemplaza las actuales)">Regenerar</button>' : '') +
+            '</td>' +
             '</tr>';
     }
 
@@ -189,6 +191,21 @@ jQuery(function ($) {
         var n = hsy_selected_ids().length;
         $('#hsy-selected-count').text(n);
         $('#hsy-import-selected').prop('disabled', busy || !n);
+        var m = hsy_selected_product_ids().length;
+        $('#hsy-regenerate-count').text(m);
+        $('#hsy-regenerate-selected').prop('disabled', busy || !m || !D.content_enabled);
+    }
+
+    // Productos de la tienda (ya importados) entre las filas marcadas.
+    function hsy_selected_product_ids() {
+        var ids = hsy_selected_ids();
+        var out = [];
+        for (var i = 0; i < rows.length; i++) {
+            if (rows[i].product_id && $.inArray(rows[i].id, ids) !== -1) {
+                out.push(rows[i].product_id);
+            }
+        }
+        return out;
     }
 
     function hsy_set_rows(data) {
@@ -333,7 +350,7 @@ jQuery(function ($) {
     }
 
     // Genera descripción y descripción corta de los productos indicados, de a D.content_batch.
-    function hsy_content(productIds, done) {
+    function hsy_content(productIds, done, force) {
         var total = productIds.length;
         var count = 0;
         var errors = 0;
@@ -356,7 +373,7 @@ jQuery(function ($) {
                 return;
             }
             var batch = productIds.splice(0, D.content_batch || 1);
-            hsy_post('content', { ids: batch }).then(function (results) {
+            hsy_post('content', { ids: batch, force: force ? 1 : 0 }).then(function (results) {
                 for (var i = 0; i < results.length; i++) {
                     if (!results[i].ok) {
                         errors++;
@@ -440,6 +457,37 @@ jQuery(function ($) {
     $page.on('click', '.hsy-import-one', function () {
         hsy_import([String($(this).closest('tr').data('id'))]);
     });
+    // Regenerar: reescribe la descripción y la corta con la IA aunque ya existan.
+    function hsy_regenerate(productIds) {
+        if (busy || !productIds.length) {
+            return;
+        }
+        if (!D.content_enabled) {
+            window.alert('Activa la IA en Importación → Descripciones.');
+            return;
+        }
+        var msg = productIds.length === 1
+            ? '¿Regenerar la descripción y la descripción corta de este producto? Se reemplazan las actuales, también si se editaron a mano.'
+            : '¿Regenerar la descripción y la descripción corta de ' + productIds.length + ' productos? Se reemplazan las actuales, también si se editaron a mano. Cada producto hace dos llamadas a la IA.';
+        if (window.confirm(msg)) {
+            hsy_content(productIds.slice(0), function () {}, true);
+        }
+    }
+
+    $page.on('click', '.hsy-regenerate-one', function () {
+        var id = String($(this).closest('tr').data('id'));
+        for (var i = 0; i < rows.length; i++) {
+            if (rows[i].id === id && rows[i].product_id) {
+                hsy_regenerate([rows[i].product_id]);
+                return;
+            }
+        }
+    });
+
+    $page.on('click', '#hsy-regenerate-selected', function () {
+        hsy_regenerate(hsy_selected_product_ids());
+    });
+
     $page.on('click', '#hsy-import-selected', function () {
         hsy_import(hsy_selected_ids());
     });

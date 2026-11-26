@@ -4,6 +4,16 @@ Todos los cambios importantes del plugin Host Seeystems. Formato basado en [Keep
 
 > ✍️ Antes de publicar, agrega arriba una sección `## [Sin publicar]` con los cambios. `npm run push-v -- patch|minor|major` la renombra a `## [X.Y.Z] - fecha`, y no publica si esa sección no existe.
 
+## [Sin publicar]
+
+### ✨ Añadido
+- 🔄 **Regenerar descripciones**: botón «Regenerar» en cada producto importado y «Regenerar descripciones (N)» para los seleccionados. Vuelve a generar con IA la descripción y la descripción corta aunque ya existan (también si se editaron a mano), con confirmación.
+- 🧩 Variables `{tipo_producto}` («Reloj» o, en joyas, «Aretes (joya)»), `{material}` y `{color}`; el tipo de producto va también como primera línea de `{contexto}`.
+
+### 🔄 Cambiado
+- 💍 **Joyas**: el catálogo usa los campos de reloj (Correa / Caja) para el material y el color. En las joyas se guardan como **Material** y **Color** («Caja: Acero, Plateado» → Material «Acero», Color «Plateado») y se quitan Correa, Caja y Resistencia al agua: en las características, en la descripción corta provisional y en lo que recibe la IA (también en joyas importadas antes, sin reimportar).
+- ✍️ Prompts por defecto: incluir solo características que correspondan al tipo de producto (en joyas, nada de correa, caja, esfera ni resistencia al agua aunque estén en los datos).
+
 ## [1.4.2] - 2026-11-25
 
 ### ✨ Añadido

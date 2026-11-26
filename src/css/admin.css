@@ -303,3 +303,13 @@
 	display: block;
 	line-height: 1.9;
 }
+
+.hsy-page .hsy-col-action .button + .button {
+	margin-top: 4px;
+}
+
+.hsy-page .hsy-table .hsy-col-action .button {
+	display: block;
+	margin-left: auto;
+	white-space: nowrap;
+}

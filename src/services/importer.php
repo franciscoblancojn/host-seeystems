@@ -59,6 +59,7 @@ class HSY_IMPORTER
         } else {
             $fields = $config['update_existing'] ? (array) $config['update_fields'] : [];
         }
+        $url_change = null;
         $has = function ($field) use ($fields) {
             return in_array($field, $fields, true);
         };
@@ -87,7 +88,15 @@ class HSY_IMPORTER
             }
         }
         if ($has('name')) {
-            $product->set_name(self::name($item, $config['name_template'], $config));
+            $new_name = self::name($item, $config['name_template'], $config);
+            if (!$is_new && $new_name !== $product->get_name()) {
+                // El nombre cambió: la URL también. WordPress guarda el slug viejo (_wp_old_slug) al guardar un
+                // producto publicado y HSY_HOOK_REDIRECT redirige la URL vieja con 301.
+                $old_slug = $product->get_slug();
+                $product->set_slug(wp_unique_post_slug(sanitize_title($new_name), $product->get_id(), $product->get_status(), 'product', 0));
+                $url_change = ['from' => $old_slug, 'to' => $product->get_slug()];
+            }
+            $product->set_name($new_name);
         }
         if ($has('price') && null !== $item['pvp']) {
             // PVP sugerido = precio normal. El precio rebajado lo define la tienda: no se toca.
@@ -124,6 +133,10 @@ class HSY_IMPORTER
         }
         $product->update_meta_data('_hsy_imported_at', time());
         $product_id = $product->save();
+
+        if (!empty($url_change) && $url_change['from'] !== $url_change['to']) {
+            HSY_LOG_SERVICE::add('url_cambiada', ['product_id' => $product_id, 'from' => $url_change['from'], 'to' => $url_change['to']]);
+        }
 
         if ($has('attributes') && '' !== $item['brand']) {
             $brand = HSY_BRANDS::assign($product_id, $item['brand']);

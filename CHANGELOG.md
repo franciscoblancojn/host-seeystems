@@ -4,6 +4,12 @@ Todos los cambios importantes del plugin Host Seeystems. Formato basado en [Keep
 
 > ✍️ Antes de publicar, agrega arriba una sección `## [Sin publicar]` con los cambios. `npm run push-v -- patch|minor|major` la renombra a `## [X.Y.Z] - fecha`, y no publica si esa sección no existe.
 
+## [Sin publicar]
+
+### ✨ Añadido
+- 🔗 Al actualizar el **nombre** de un producto ya importado, la **URL** (slug) se regenera con el nombre nuevo (solo si el nombre cambió) y queda en el log (`url_cambiada`).
+- ↪️ **Redirección 301** de la URL vieja a la nueva: WordPress guarda el slug anterior (`_wp_old_slug`) en los productos publicados, y el plugin redirige esa URL vieja aunque la estructura de enlaces de producto no use base (p. ej. sin «/producto/»), donde la redirección propia de WordPress no actúa.
+
 ## [1.4.1] - 2026-11-25
 
 ### ✨ Añadido

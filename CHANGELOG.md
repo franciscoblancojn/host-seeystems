@@ -4,7 +4,7 @@ Todos los cambios importantes del plugin Host Seeystems. Formato basado en [Keep
 
 > ✍️ Antes de publicar, agrega arriba una sección `## [Sin publicar]` con los cambios. `npm run push-v -- patch|minor|major` la renombra a `## [X.Y.Z] - fecha`, y no publica si esa sección no existe.
 
-## [Sin publicar]
+## [1.4.3] - 2026-11-26
 
 ### ✨ Añadido
 - 🔄 **Regenerar descripciones**: botón «Regenerar» en cada producto importado y «Regenerar descripciones (N)» para los seleccionados. Vuelve a generar con IA la descripción y la descripción corta aunque ya existan (también si se editaron a mano), con confirmación.

@@ -4,6 +4,12 @@ Todos los cambios importantes del plugin Host Seeystems. Formato basado en [Keep
 
 > ✍️ Antes de publicar, agrega arriba una sección `## [Sin publicar]` con los cambios. `npm run push-v -- patch|minor|major` la renombra a `## [X.Y.Z] - fecha`, y no publica si esa sección no existe.
 
+## [1.5.0] - 2026-11-26
+
+### 🔄 Cambiado
+- 🧩 «Generar descripciones pendientes» pasa a **«Generar descripciones y categorías faltantes (N)»**: completa solo lo que le falta a cada producto importado. Si no tiene categorías, se las asigna por género / joyas (sin IA) y después la IA elige el estilo; si falta la descripción, la corta o el estilo, genera solo eso. Lo que ya tiene no se toca.
+- El contador (N) incluye también los productos importados sin categoría. Sin IA activa, el botón igual asigna las categorías.
+
 ## [1.4.6] - 2026-11-26
 
 ### 🔄 Cambiado

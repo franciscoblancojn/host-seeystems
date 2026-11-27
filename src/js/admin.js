@@ -397,8 +397,8 @@ jQuery(function ($) {
         count = parseInt(count, 10) || 0;
         $('#hsy-pending-count').text(count);
         $page.find('.hsy-content-bar').prop('hidden', !count);
-        $('#hsy-content-pending').prop('disabled', busy || !count || !D.content_enabled)
-            .attr('title', D.content_enabled ? '' : 'Activa la IA o la búsqueda en Google en Importación.');
+        $('#hsy-content-pending').prop('disabled', busy || !count)
+            .attr('title', D.content_enabled ? '' : 'Sin IA solo se asignan las categorías; para descripciones y estilo activa la IA en Importación.');
     }
 
     // ------------------------------------------------------------------ contadores y publicar
@@ -488,12 +488,12 @@ jQuery(function ($) {
         hsy_busy(true);
         hsy_progress(0, total);
         $('#hsy-progress-ai').prop('hidden', true);
-        hsy_message('#hsy-message', 'Generando descripciones de ' + total + ' productos…', 'info');
+        hsy_message('#hsy-message', (force ? 'Regenerando descripciones de ' : 'Completando lo que les falta a ') + total + ' productos…', 'info');
 
         function next() {
             if (!productIds.length) {
                 hsy_busy(false);
-                hsy_message('#hsy-message', 'Descripciones: ' + (total - errors) + ' correctas' +
+                hsy_message('#hsy-message', (force ? 'Descripciones regeneradas: ' : 'Productos completados: ') + (total - errors) + ' correctos' +
                     (errors ? ', ' + errors + ' con error (' + last + ').' : '.'), errors ? 'error' : 'ok');
                 hsy_refresh_pending();
                 done();
@@ -525,7 +525,7 @@ jQuery(function ($) {
             return;
         }
         hsy_post('pending', {}).then(function (ids) {
-            if (ids.length && window.confirm('¿Generar las descripciones de ' + ids.length + ' productos? Cada uno hace una llamada a la IA.')) {
+            if (ids.length && window.confirm('¿Completar lo que les falta a ' + ids.length + ' productos importados (categorías, estilo, descripción y/o descripción corta)? Solo se genera lo que falta; lo que ya tienen no se toca.')) {
                 hsy_content(ids, function () {});
             }
         });

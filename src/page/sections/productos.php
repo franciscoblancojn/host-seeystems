@@ -47,7 +47,7 @@ $catalog = new HSY_USE_DATA_CATALOG();
         <span class="hsy-muted"><span id="hsy-total">0</span> productos</span>
     </div>
     <div class="hsy-content-bar" hidden>
-        <button type="button" class="button" id="hsy-content-pending">Generar descripciones pendientes (<span id="hsy-pending-count">0</span>)</button>
+        <button type="button" class="button" id="hsy-content-pending" title="Completa solo lo que le falta a cada producto importado: categorías (por género), estilo, descripción y/o descripción corta">Generar descripciones y categorías faltantes (<span id="hsy-pending-count">0</span>)</button>
         <span class="hsy-muted">Productos importados sin descripción o con la descripción corta automática. Se configura en <strong>Importación → Descripciones</strong>.</span>
     </div>
     <div class="hsy-progress" id="hsy-progress" hidden>

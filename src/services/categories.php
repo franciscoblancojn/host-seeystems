@@ -166,6 +166,39 @@ class HSY_CATEGORIES
     }
 
     /**
+     * Asigna las categorías a un producto importado que no tiene (por su género / joyas), sin guardar.
+     * Deja el estilo pendiente si hay subcategorías. Devuelve los nombres asignados ([] si no hay regla).
+     */
+    public static function assign_missing($product, $config)
+    {
+        if (self::has_categories($product)) {
+            return [];
+        }
+        $brands = taxonomy_exists('product_brand') ? wp_get_post_terms($product->get_id(), 'product_brand', ['fields' => 'names']) : [];
+        $gender = '';
+        foreach ($product->get_attributes() as $attribute) {
+            if ($attribute instanceof WC_Product_Attribute && 'genero' === sanitize_title($attribute->get_name())) {
+                $gender = implode(' ', $attribute->get_options());
+            }
+        }
+        $ids = self::ids_for([
+            'brand' => is_array($brands) ? implode(' ', $brands) : '',
+            'attributes' => ['Género' => $gender],
+        ], $config);
+        if (!$ids) {
+            return [];
+        }
+        $product->set_category_ids($ids);
+        if ('done' !== $product->get_meta(HSY_STYLE_META)) {
+            $product->update_meta_data(HSY_STYLE_META, self::style_options($product) ? 'pending' : 'none');
+        }
+        return array_map(function ($id) {
+            $term = get_term($id, self::TAXONOMY);
+            return $term instanceof WP_Term ? $term->name : '';
+        }, $ids);
+    }
+
+    /**
      * Nombres de categorías de varios productos en una consulta: [product_id => [nombres…]] (sin la de por defecto).
      */
     public static function names_for($product_ids)

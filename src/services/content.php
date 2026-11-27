@@ -161,7 +161,8 @@ class HSY_CONTENT
     }
 
     /**
-     * IDs de los productos importados con contenido pendiente (una consulta).
+     * IDs de los productos importados con algo pendiente (una consulta): descripción, descripción corta,
+     * estilo o categorías (sin ninguna, salvo «Sin categorizar»).
      */
     public static function pending_ids($limit = 2000)
     {
@@ -176,12 +177,17 @@ class HSY_CONTENT
              WHERE p.post_type = 'product' AND p.post_status <> 'trash'
                AND (TRIM(p.post_content) = '' OR TRIM(p.post_excerpt) = '' OR sa.meta_value = 'yes'
                     OR (sa.meta_value IS NULL AND p.post_excerpt LIKE '<ul><li><strong>%%')
-                    OR st.meta_value = %s)
+                    OR st.meta_value = %s
+                    OR NOT EXISTS (
+                        SELECT 1 FROM {$wpdb->term_relationships} tr
+                        INNER JOIN {$wpdb->term_taxonomy} tt ON tt.term_taxonomy_id = tr.term_taxonomy_id
+                        WHERE tr.object_id = p.ID AND tt.taxonomy = 'product_cat' AND tt.term_id <> %d))
              ORDER BY p.ID ASC LIMIT %d",
             HSY_IMPORTED_META,
             HSY_SHORT_AUTO_META,
             HSY_STYLE_META,
             $style,
+            (int) get_option('default_product_cat', 0),
             $limit
         )));
     }
@@ -288,11 +294,29 @@ SALIDA (texto plano, una sola línea, sin formato):";
         if (!$product || !HSY_STOCK::is_imported($product)) {
             return new WP_Error('hsy_content_product', 'El producto #' . (int) $product_id . ' no es un producto importado.');
         }
+        // Categorías faltantes: se asignan por género / joyas (sin IA) y después la IA elige el estilo.
+        $done = [];
+        $pre_warnings = [];
+        if (!HSY_CATEGORIES::has_categories($product)) {
+            $assigned = HSY_CATEGORIES::assign_missing($product, $config);
+            if ($assigned) {
+                $product->save();
+                $done[] = 'categories';
+            } else {
+                $pre_warnings[] = 'Sin categoría: su género no tiene regla en Importación → Categorías.';
+            }
+        }
         $need_style = self::style_pending($product, $config) && self::ai_enabled($config);
         if (!$force && !self::is_pending($product) && !$need_style) {
-            return ['fields' => [], 'source' => '', 'warnings' => []];
+            if ($done) {
+                HSY_LOG_SERVICE::add('content', ['product_id' => $product->get_id(), 'fields' => $done, 'source' => 'reglas', 'warnings' => $pre_warnings]);
+            }
+            return ['fields' => $done, 'source' => $done ? 'reglas' : '', 'warnings' => $pre_warnings];
         }
         if (!self::enabled($config)) {
+            if ($done) {
+                return ['fields' => $done, 'source' => 'reglas', 'warnings' => array_merge($pre_warnings, ['Descripciones: activa la IA o la búsqueda en Google en Importación.'])];
+            }
             return new WP_Error('hsy_content_off', 'No hay generador de descripciones: activa la IA o la búsqueda en Google en Importación.');
         }
 
@@ -300,10 +324,10 @@ SALIDA (texto plano, una sola línea, sin formato):";
         $need_description = $force || '' === trim(wp_strip_all_tags($product->get_description()));
         $need_short = $force || self::short_pending($product);
         $web = self::web($product, $config);
-        $warnings = $web['warnings'];
+        $warnings = array_merge($pre_warnings, $web['warnings']);
         $web = $web['web'];
 
-        $fields = [];
+        $fields = $done;
         $source = '';
         if (self::ai_enabled($config)) {
             $generated = self::generate($product, $web, $config, $need_description, $need_short);

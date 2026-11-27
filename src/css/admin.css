@@ -313,3 +313,26 @@
 	margin-left: auto;
 	white-space: nowrap;
 }
+
+.hsy-page .hsy-pager {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	margin: 8px 0;
+}
+
+.hsy-page .hsy-pager__nav {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+
+.hsy-page .hsy-pager__current {
+	margin: 0 6px;
+}
+
+.hsy-page .hsy-pager .hsy-page-input {
+	width: 4.5em;
+}

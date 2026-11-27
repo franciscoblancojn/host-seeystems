@@ -42,7 +42,8 @@ $catalog = new HSY_USE_DATA_CATALOG();
         </select>
         <button type="button" class="button" id="hsy-import-selected" disabled>Importar seleccionados (<span id="hsy-selected-count">0</span>)</button>
         <button type="button" class="button" id="hsy-regenerate-selected" disabled title="Vuelve a generar con IA la descripción y la descripción corta de los productos ya importados seleccionados">Regenerar descripciones (<span id="hsy-regenerate-count">0</span>)</button>
-        <button type="button" class="button" id="hsy-import-all">Importar todos los visibles</button>
+        <button type="button" class="button-link" id="hsy-clear-selection" hidden>Quitar selección</button>
+        <button type="button" class="button" id="hsy-import-all" title="Importa los productos de la página actual (100 por página)">Importar esta página (<span id="hsy-page-count">0</span>)</button>
         <span class="hsy-muted"><span id="hsy-total">0</span> productos</span>
     </div>
     <div class="hsy-content-bar" hidden>
@@ -54,6 +55,7 @@ $catalog = new HSY_USE_DATA_CATALOG();
         <span class="hsy-progress__text"></span>
     </div>
 
+    <div class="hsy-pager" hidden></div>
     <table class="wp-list-table widefat striped hsy-table" hidden>
         <thead>
             <tr>
@@ -72,4 +74,5 @@ $catalog = new HSY_USE_DATA_CATALOG();
         </thead>
         <tbody id="hsy-rows"></tbody>
     </table>
+    <div class="hsy-pager" hidden></div>
 <?php endif; ?>

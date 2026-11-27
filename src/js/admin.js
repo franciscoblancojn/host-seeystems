@@ -168,28 +168,92 @@ jQuery(function ($) {
         });
     }
 
-    function hsy_render() {
+    // ------------------------------------------------------------------ paginación (de a HSY_PAGE_SIZE)
+
+    var HSY_PAGE_SIZE = 100;
+    var currentPage = 1;
+    var selected = {}; // ids del catálogo seleccionados (se conserva al cambiar de página)
+
+    // Filas de la página actual (después de buscar y filtrar).
+    function hsy_page_rows() {
         var visible = hsy_visible();
+        var pages = Math.max(1, Math.ceil(visible.length / HSY_PAGE_SIZE));
+        currentPage = Math.min(Math.max(1, currentPage), pages);
+        var start = (currentPage - 1) * HSY_PAGE_SIZE;
+        return { all: visible, list: visible.slice(start, start + HSY_PAGE_SIZE), start: start, pages: pages };
+    }
+
+    function hsy_pager_html(info) {
+        if (!info.all.length) {
+            return '';
+        }
+        var from = info.start + 1;
+        var to = info.start + info.list.length;
+        var btn = function (page, label, title, disabled) {
+            return '<button type="button" class="button hsy-page-btn" data-page="' + page + '" title="' + title + '"' +
+                (disabled ? ' disabled' : '') + '>' + label + '</button>';
+        };
+        return '<span class="hsy-muted">Mostrando ' + from + '–' + to + ' de ' + info.all.length + '</span>' +
+            '<span class="hsy-pager__nav">' +
+            btn(1, '«', 'Primera página', currentPage === 1) +
+            btn(currentPage - 1, '‹', 'Página anterior', currentPage === 1) +
+            '<span class="hsy-pager__current">Página <input type="number" class="small-text hsy-page-input" min="1" max="' + info.pages + '" value="' + currentPage + '"> de ' + info.pages + '</span>' +
+            btn(currentPage + 1, '›', 'Página siguiente', currentPage === info.pages) +
+            btn(info.pages, '»', 'Última página', currentPage === info.pages) +
+            '</span>';
+    }
+
+    function hsy_render() {
+        var info = hsy_page_rows();
         var html = [];
-        for (var i = 0; i < visible.length; i++) {
-            html.push(hsy_row_html(visible[i]));
+        for (var i = 0; i < info.list.length; i++) {
+            html.push(hsy_row_html(info.list[i]));
         }
         $('#hsy-rows').html(html.length ? html.join('') : '<tr><td colspan="11">No hay productos.</td></tr>');
-        $('#hsy-total').text(visible.length);
+        // Marcar las filas seleccionadas (la selección se conserva entre páginas).
+        $('#hsy-rows .hsy-check').each(function () {
+            this.checked = !!selected[this.value];
+        });
+        $('#hsy-total').text(info.all.length);
+        $('#hsy-page-count').text(info.list.length);
+        $page.find('.hsy-pager').html(hsy_pager_html(info)).prop('hidden', !info.all.length);
         $page.find('.hsy-actions, .hsy-table').prop('hidden', !rows.length);
-        $page.find('.hsy-check-all').prop('checked', false);
+        var $checks = $('#hsy-rows .hsy-check');
+        $page.find('.hsy-check-all').prop('checked', $checks.length > 0 && $checks.length === $checks.filter(':checked').length);
         hsy_update_count();
     }
 
+    function hsy_go_to(page) {
+        currentPage = parseInt(page, 10) || 1;
+        hsy_render();
+        var top = $page.find('.hsy-actions').offset();
+        if (top) {
+            $('html, body').scrollTop(top.top - 40);
+        }
+    }
+
+    $page.on('click', '.hsy-page-btn', function () {
+        hsy_go_to($(this).data('page'));
+    });
+    $page.on('change', '.hsy-page-input', function () {
+        hsy_go_to($(this).val());
+    });
+
+    // Ids seleccionados que siguen en el catálogo (de cualquier página).
     function hsy_selected_ids() {
-        return $page.find('.hsy-check:checked').map(function () {
-            return this.value;
-        }).get();
+        var ids = [];
+        for (var i = 0; i < rows.length; i++) {
+            if (selected[rows[i].id]) {
+                ids.push(rows[i].id);
+            }
+        }
+        return ids;
     }
 
     function hsy_update_count() {
         var n = hsy_selected_ids().length;
         $('#hsy-selected-count').text(n);
+        $('#hsy-clear-selection').prop('hidden', !n);
         $('#hsy-import-selected').prop('disabled', busy || !n);
         var m = hsy_selected_product_ids().length;
         $('#hsy-regenerate-count').text(m);
@@ -216,13 +280,42 @@ jQuery(function ($) {
         hsy_render();
     }
 
+    // «Seleccionar todo» marca o desmarca solo la página actual.
     $page.on('change', '.hsy-check-all', function () {
-        $page.find('.hsy-check').prop('checked', this.checked);
+        var on = this.checked;
+        $('#hsy-rows .hsy-check').each(function () {
+            this.checked = on;
+            if (on) {
+                selected[this.value] = true;
+            } else {
+                delete selected[this.value];
+            }
+        });
         hsy_update_count();
     });
-    $page.on('change', '.hsy-check', hsy_update_count);
-    $page.on('input', '#hsy-search', hsy_render);
-    $page.on('change', '#hsy-filter', hsy_render);
+    $page.on('change', '.hsy-check', function () {
+        if (this.checked) {
+            selected[this.value] = true;
+        } else {
+            delete selected[this.value];
+        }
+        var $checks = $('#hsy-rows .hsy-check');
+        $page.find('.hsy-check-all').prop('checked', $checks.length === $checks.filter(':checked').length);
+        hsy_update_count();
+    });
+    $page.on('click', '#hsy-clear-selection', function () {
+        selected = {};
+        hsy_render();
+    });
+    // Buscar o filtrar vuelve a la página 1.
+    $page.on('input', '#hsy-search', function () {
+        currentPage = 1;
+        hsy_render();
+    });
+    $page.on('change', '#hsy-filter', function () {
+        currentPage = 1;
+        hsy_render();
+    });
 
     $page.on('click', '#hsy-load', function () {
         if (busy) {
@@ -491,11 +584,12 @@ jQuery(function ($) {
     $page.on('click', '#hsy-import-selected', function () {
         hsy_import(hsy_selected_ids());
     });
+    // Importa las filas de la página actual (de a 100, para ir revisando).
     $page.on('click', '#hsy-import-all', function () {
-        var ids = $.map(hsy_visible(), function (row) {
+        var ids = $.map(hsy_page_rows().list, function (row) {
             return row.id;
         });
-        if (ids.length && window.confirm('¿Importar ' + ids.length + ' productos?')) {
+        if (ids.length && window.confirm('¿Importar los ' + ids.length + ' productos de esta página (página ' + currentPage + ')?')) {
             hsy_import(ids);
         }
     });

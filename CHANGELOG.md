@@ -4,6 +4,15 @@ Todos los cambios importantes del plugin Host Seeystems. Formato basado en [Keep
 
 > ✍️ Antes de publicar, agrega arriba una sección `## [Sin publicar]` con los cambios. `npm run push-v -- patch|minor|major` la renombra a `## [X.Y.Z] - fecha`, y no publica si esa sección no existe.
 
+## [1.4.5] - 2026-11-26
+
+### ✨ Añadido
+- 📄 **Tabla paginada de 100 en 100**, con paginador arriba y abajo («Mostrando 101–200 de 914», primera / anterior / página N / siguiente / última). Buscar o filtrar vuelve a la página 1; después de importar o generar se queda en la misma página.
+- ☑️ La selección se conserva al cambiar de página («Quitar selección» para vaciarla); «seleccionar todo» marca solo la página actual.
+
+### 🔄 Cambiado
+- «Importar todos los visibles» pasa a **«Importar esta página (N)»**: importa los productos de la página actual, para ir revisando de 100 en 100.
+
 ## [1.4.4] - 2026-11-26
 
 ### ✨ Añadido

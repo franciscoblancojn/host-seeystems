@@ -4,6 +4,16 @@ Todos los cambios importantes del plugin Host Seeystems. Formato basado en [Keep
 
 > ✍️ Antes de publicar, agrega arriba una sección `## [Sin publicar]` con los cambios. `npm run push-v -- patch|minor|major` la renombra a `## [X.Y.Z] - fecha`, y no publica si esa sección no existe.
 
+## [1.4.6] - 2026-11-26
+
+### 🔄 Cambiado
+- ⚡ **Importación e IA en paralelo**: al importar, cada lote de 5 que termina pasa enseguida a la cola de la IA (de a 1), mientras se importan los 5 siguientes; lo que llega mientras la IA trabaja se suma a la cola. Antes las descripciones empezaban cuando terminaba toda la importación. Nunca hay más de 2 peticiones a la vez.
+- 📊 Dos barras de progreso al importar («Importación N/M» e «IA N/M») y un mensaje con el avance y el resumen final de las dos colas.
+- 🔄 **La tabla se actualiza en vivo**: cada producto importado muestra al momento sus badges («Pendiente de generar con IA», categorías) y, cada vez que la IA termina uno (al importar, «Generar pendientes» o «Regenerar»), su fila se repinta con la descripción y la corta, con un destello verde. Sin recargar la tabla: se mantienen la página y la selección.
+
+### 🐛 Corregido
+- Sugerencia de categorías por género: si la tienda no tiene «Relojes», ya no elige una «Mujer» / «Hombre» de otra rama (p. ej. la de «Joyas»); solo de primer nivel.
+
 ## [1.4.5] - 2026-11-26
 
 ### ✨ Añadido

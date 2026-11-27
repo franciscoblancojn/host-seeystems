@@ -335,10 +335,32 @@ jQuery(function ($) {
 
     // ------------------------------------------------------------------ importar
 
-    function hsy_progress(done, total) {
-        var $p = $('#hsy-progress').prop('hidden', !total);
+    // Barra de progreso: #hsy-progress (importación / general) o #hsy-progress-ai (cola de IA).
+    function hsy_progress(done, total, selector, label) {
+        var $p = $(selector || '#hsy-progress').prop('hidden', !total);
         $p.find('.hsy-progress__bar span').css('width', (total ? Math.round(done * 100 / total) : 0) + '%');
-        $p.find('.hsy-progress__text').text(done + ' / ' + total);
+        $p.find('.hsy-progress__text').text((label ? label + ' ' : '') + done + ' / ' + total);
+    }
+
+    // Repinta la fila de un producto con los textos que devuelve la IA (sin recargar la tabla).
+    function hsy_apply_content(result) {
+        if (!result || !result.row) {
+            return;
+        }
+        for (var i = 0; i < rows.length; i++) {
+            if (rows[i].product_id === result.product_id) {
+                $.extend(rows[i], result.row);
+                var $tr = $('#hsy-rows tr[data-id="' + String(rows[i].id).replace(/"/g, '\\"') + '"]');
+                if ($tr.length) {
+                    var checked = $tr.find('.hsy-check').prop('checked');
+                    var $new = $(hsy_row_html(rows[i]));
+                    $new.find('.hsy-check').prop('checked', checked);
+                    $new.addClass('hsy-row--updated');
+                    $tr.replaceWith($new);
+                }
+                return;
+            }
+        }
     }
 
     function hsy_apply_result(result) {
@@ -351,10 +373,19 @@ jQuery(function ($) {
             if (rows[i].id === result.source_id) {
                 rows[i].product_id = result.product_id;
                 rows[i].edit = result.edit;
-                $tr.find('.hsy-col-status').html(hsy_status(rows[i]) +
-                    (result.action === 'skipped' ? ' <span class="hsy-muted">(sin cambios)</span>' : '') +
-                    (result.message ? '<br><span class="hsy-warning">' + hsy_text(result.message) + '</span>' : ''));
-                $tr.find('.hsy-import-one').text('Actualizar');
+                if (result.row) {
+                    $.extend(rows[i], result.row);
+                }
+                // Fila completa (descripciones, categorías, botones) + avisos de la importación.
+                if ($tr.length) {
+                    var checked = $tr.find('.hsy-check').prop('checked');
+                    var $new = $(hsy_row_html(rows[i]));
+                    $new.find('.hsy-check').prop('checked', checked);
+                    $new.find('.hsy-col-status').append(
+                        (result.action === 'skipped' ? ' <span class="hsy-muted">(sin cambios)</span>' : '') +
+                        (result.message ? '<br><span class="hsy-warning">' + hsy_text(result.message) + '</span>' : ''));
+                    $tr.replaceWith($new);
+                }
                 break;
             }
         }
@@ -406,6 +437,8 @@ jQuery(function ($) {
             var last = '';
             hsy_busy(true);
             hsy_progress(0, total);
+        $('#hsy-progress-ai').prop('hidden', true);
+            $('#hsy-progress-ai').prop('hidden', true);
             hsy_message('#hsy-message', 'Publicando ' + total + ' productos…', 'info');
 
             function next() {
@@ -454,6 +487,7 @@ jQuery(function ($) {
         }
         hsy_busy(true);
         hsy_progress(0, total);
+        $('#hsy-progress-ai').prop('hidden', true);
         hsy_message('#hsy-message', 'Generando descripciones de ' + total + ' productos…', 'info');
 
         function next() {
@@ -468,6 +502,7 @@ jQuery(function ($) {
             var batch = productIds.splice(0, D.content_batch || 1);
             hsy_post('content', { ids: batch, force: force ? 1 : 0 }).then(function (results) {
                 for (var i = 0; i < results.length; i++) {
+                    hsy_apply_content(results[i]);
                     if (!results[i].ok) {
                         errors++;
                         last = results[i].message;
@@ -496,55 +531,113 @@ jQuery(function ($) {
         });
     });
 
+    /**
+     * Importación con dos colas en paralelo:
+     * - importación de a D.batch (5) productos;
+     * - IA de a D.content_batch (1): cada lote importado entra en la cola de la IA en cuanto termina,
+     *   sin esperar al resto. Así nunca hay más de 2 peticiones a la vez.
+     */
     function hsy_import(ids) {
         if (busy || !ids.length) {
             return;
         }
-        var total = ids.length;
-        var done = 0;
-        var errors = 0;
-        var imported = [];
+        var withAi = !!D.content_auto;
+        var imp = { total: ids.length, done: 0, errors: 0, running: true };
+        var ai = { queue: [], total: 0, done: 0, errors: 0, running: false, last: '' };
         hsy_busy(true);
-        hsy_progress(0, total);
-        hsy_message('#hsy-message', 'Importando ' + total + ' productos…', 'info');
+        hsy_progress(0, imp.total, '#hsy-progress', 'Importación');
+        $('#hsy-progress-ai').prop('hidden', true);
+        hsy_status_message();
 
-        function next() {
-            if (!ids.length) {
-                hsy_busy(false);
-                var summary = 'Importación terminada: ' + (total - errors) + ' correctos' + (errors ? ', ' + errors + ' con error.' : '.');
-                hsy_message('#hsy-message', summary, errors ? 'error' : 'ok');
-                // Después de importar, las descripciones pendientes de esos productos (si está activado).
-                if (D.content_auto && imported.length) {
-                    hsy_content(imported, function () {
-                        $('#hsy-message p').text(summary + ' ' + $('#hsy-message p').text());
-                    });
-                } else {
-                    hsy_refresh_pending();
+        function hsy_status_message(final) {
+            var text = (final ? 'Terminado. ' : '') + 'Importación: ' + imp.done + '/' + imp.total +
+                (imp.errors ? ' (' + imp.errors + ' con error)' : '');
+            if (withAi) {
+                text += ' · Descripciones con IA: ' + ai.done + '/' + ai.total +
+                    (ai.errors ? ' (' + ai.errors + ' con error: ' + ai.last + ')' : '');
+            }
+            hsy_message('#hsy-message', text + (final ? '' : '…'), final ? (imp.errors || ai.errors ? 'error' : 'ok') : 'info');
+        }
+
+        function finish() {
+            if (imp.running || ai.running) {
+                return;
+            }
+            hsy_busy(false);
+            hsy_status_message(true);
+            hsy_refresh_pending();
+        }
+
+        function aiNext() {
+            if (!ai.queue.length) {
+                ai.running = false;
+                finish();
+                return;
+            }
+            ai.running = true;
+            var batch = ai.queue.splice(0, D.content_batch || 1);
+            hsy_post('content', { ids: batch }).then(function (results) {
+                for (var i = 0; i < results.length; i++) {
+                    hsy_apply_content(results[i]);
+                    if (!results[i].ok) {
+                        ai.errors++;
+                        ai.last = results[i].message;
+                    }
                 }
+            }, function (error) {
+                ai.errors += batch.length;
+                ai.last = error;
+            }).always(function () {
+                ai.done += batch.length;
+                hsy_progress(ai.done, ai.total, '#hsy-progress-ai', 'IA');
+                hsy_status_message();
+                aiNext();
+            });
+        }
+
+        function aiAdd(productIds) {
+            if (!withAi || !productIds.length) {
+                return;
+            }
+            ai.queue = ai.queue.concat(productIds);
+            ai.total += productIds.length;
+            hsy_progress(ai.done, ai.total, '#hsy-progress-ai', 'IA');
+            if (!ai.running) {
+                aiNext();
+            }
+        }
+
+        function importNext() {
+            if (!ids.length) {
+                imp.running = false;
+                finish();
                 return;
             }
             var batch = ids.splice(0, D.batch || 5);
+            var created = [];
             hsy_post('import', { ids: batch }).then(function (results) {
                 for (var i = 0; i < results.length; i++) {
                     if (!results[i].ok) {
-                        errors++;
+                        imp.errors++;
                     } else if (results[i].product_id) {
-                        imported.push(results[i].product_id);
+                        created.push(results[i].product_id);
                     }
                     hsy_apply_result(results[i]);
                 }
             }, function (error) {
-                errors += batch.length;
+                imp.errors += batch.length;
                 for (var i = 0; i < batch.length; i++) {
                     hsy_apply_result({ source_id: batch[i], ok: false, message: error });
                 }
             }).always(function () {
-                done += batch.length;
-                hsy_progress(done, total);
-                next();
+                imp.done += batch.length;
+                hsy_progress(imp.done, imp.total, '#hsy-progress', 'Importación');
+                hsy_status_message();
+                aiAdd(created);   // estos 5 pasan a la cola de la IA ya
+                importNext();     // y mientras tanto se importan los 5 siguientes
             });
         }
-        next();
+        importNext();
     }
 
     $page.on('click', '.hsy-import-one', function () {

@@ -34,7 +34,8 @@ class HSY_CATEGORIES
     public static function default_map()
     {
         $root = self::find_by_name('relojes', 0);
-        $parent = $root ? (int) $root->term_id : null;
+        // Sin «Relojes», solo categorías de primer nivel (no la «Mujer» de dentro de «Joyas» u otra rama).
+        $parent = $root ? (int) $root->term_id : 0;
         $women = self::find_by_name('mujer', $parent) ?: self::find_by_name('dama', $parent);
         $men = self::find_by_name('hombre', $parent) ?: self::find_by_name('caballero', $parent);
         $kids = self::find_by_name('ninos', $parent) ?: self::find_by_name('nino', $parent);

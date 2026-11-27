@@ -165,6 +165,11 @@ class HSY_API_IMPORT
                 ? ['product_id' => $id, 'ok' => false, 'message' => $result->get_error_message()]
                 : ['product_id' => $id, 'ok' => true, 'fields' => $result['fields'], 'source' => $result['source'], 'message' => implode(' · ', $result['warnings'])];
         }
+        // Textos ya guardados de cada producto, para repintar su fila en la tabla sin recargarla.
+        $texts = HSY_CONTENT::texts($ids);
+        foreach ($results as $i => $result) {
+            $results[$i]['row'] = $texts[$result['product_id']] ?? null;
+        }
         wp_send_json_success($results);
     }
 
@@ -203,6 +208,13 @@ class HSY_API_IMPORT
                 'edit' => get_edit_post_link($result['id'], 'raw'),
                 'message' => implode(' · ', $result['warnings']),
             ];
+        }
+        // Textos y categorías de los importados, para repintar sus filas (badges de pendiente) sin recargar.
+        $texts = HSY_CONTENT::texts(array_filter(wp_list_pluck($results, 'product_id')));
+        foreach ($results as $k => $r) {
+            if (!empty($r['product_id'])) {
+                $results[$k]['row'] = $texts[$r['product_id']] ?? null;
+            }
         }
         wp_send_json_success($results);
     }

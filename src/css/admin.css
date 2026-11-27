@@ -336,3 +336,26 @@
 .hsy-page .hsy-pager .hsy-page-input {
 	width: 4.5em;
 }
+
+.hsy-page .hsy-progress--ai .hsy-progress__bar span {
+	background: #8c5fd9;
+}
+
+.hsy-page .hsy-progress__text {
+	min-width: 140px;
+}
+
+/* Fila recién actualizada por la IA: un destello breve. */
+.hsy-page .hsy-table tr.hsy-row--updated td,
+.hsy-page .hsy-table tr.hsy-row--updated th {
+	animation: hsy-flash 1.6s ease-out;
+}
+
+@keyframes hsy-flash {
+	from {
+		background: #e7f6ec;
+	}
+	to {
+		background: transparent;
+	}
+}

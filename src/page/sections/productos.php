@@ -54,6 +54,10 @@ $catalog = new HSY_USE_DATA_CATALOG();
         <div class="hsy-progress__bar"><span></span></div>
         <span class="hsy-progress__text"></span>
     </div>
+    <div class="hsy-progress hsy-progress--ai" id="hsy-progress-ai" hidden>
+        <div class="hsy-progress__bar"><span></span></div>
+        <span class="hsy-progress__text"></span>
+    </div>
 
     <div class="hsy-pager" hidden></div>
     <table class="wp-list-table widefat striped hsy-table" hidden>

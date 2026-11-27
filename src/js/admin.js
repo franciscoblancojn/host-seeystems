@@ -753,6 +753,90 @@ jQuery(function ($) {
         }
     });
 
+    // ------------------------------------------------------------------ contenido por CSV
+
+    var csvToken = '';
+
+    $page.on('change', '#hsy-csv-missing', function () {
+        var $a = $('#hsy-csv-export');
+        $a.attr('href', $a.data('base') + (this.checked ? '&missing=1' : ''));
+    });
+
+    $page.on('click', '#hsy-csv-preview', function () {
+        var file = $('#hsy-csv-file').get(0).files[0];
+        if (!file) {
+            hsy_message('#hsy-csv-message', 'Elige el archivo CSV.', 'error');
+            return;
+        }
+        var form = new FormData();
+        form.append('action', 'hsy_csv_preview');
+        form.append('nonce', D.nonce);
+        form.append('mode', $('#hsy-csv-mode').val());
+        form.append('file', file);
+        var $btn = $(this).prop('disabled', true);
+        $('#hsy-csv-spinner').addClass('is-active');
+        $('#hsy-csv-apply').prop('hidden', true);
+        $('#hsy-csv-summary').prop('hidden', true).empty();
+        hsy_message('#hsy-csv-message', 'Leyendo el CSV…', 'info');
+        $.ajax({ url: D.ajax, method: 'POST', data: form, processData: false, contentType: false, dataType: 'json' }).then(function (res) {
+            if (!res || !res.success) {
+                hsy_message('#hsy-csv-message', res && res.data ? res.data : 'Error inesperado.', 'error');
+                return;
+            }
+            var d = res.data;
+            var sm = d.summary;
+            csvToken = d.token;
+            hsy_message('#hsy-csv-message', 'Vista previa (' + (d.mode === 'replace' ? 'reemplazar' : 'solo faltantes') + '): ' + sm.rows + ' filas → ' +
+                sm.update + ' se actualizarán (' + sm.description + ' descripciones, ' + sm.short + ' descripciones cortas), ' +
+                sm.skip + ' se saltan, ' + sm.error + ' con error. Nada se ha escrito todavía.', sm.update ? 'ok' : 'error');
+            if (d.issues && d.issues.length) {
+                var html = '<table class="widefat striped"><thead><tr><th>Línea</th><th>Producto</th><th>Qué pasa</th></tr></thead><tbody>';
+                for (var i = 0; i < d.issues.length; i++) {
+                    html += '<tr><td>' + d.issues[i].line + '</td><td>' + hsy_text(d.issues[i].product_id || d.issues[i].sku) + '</td><td>' +
+                        (d.issues[i].action === 'error' ? '<span class="hsy-error">' : '<span class="hsy-muted">') + hsy_text(d.issues[i].message) + '</span></td></tr>';
+                }
+                $('#hsy-csv-summary').html(html + '</tbody></table>' + (sm.skip + sm.error > d.issues.length ? '<p class="hsy-muted">Se muestran las primeras ' + d.issues.length + '.</p>' : '')).prop('hidden', false);
+            }
+            $('#hsy-csv-apply').text('Aplicar (' + sm.update + ' productos)').prop('hidden', !sm.update);
+        }, function (xhr) {
+            hsy_message('#hsy-csv-message', 'Error de conexión (' + xhr.status + ').', 'error');
+        }).always(function () {
+            $btn.prop('disabled', false);
+            $('#hsy-csv-spinner').removeClass('is-active');
+        });
+    });
+
+    $page.on('click', '#hsy-csv-apply', function () {
+        if (busy || !csvToken || !window.confirm('¿Escribir los textos del CSV en los productos?')) {
+            return;
+        }
+        var stats = { ok: 0, partial: 0, errors: 0, last: '' };
+        $(this).prop('hidden', true);
+        hsy_busy(true);
+        $('#hsy-progress-ai').prop('hidden', true);
+        function step(offset) {
+            hsy_post('csv_apply', { token: csvToken, offset: offset }).then(function (d) {
+                for (var i = 0; i < d.results.length; i++) {
+                    hsy_tally(d.results[i], stats);
+                }
+                hsy_progress(d.done, d.total, '#hsy-progress', 'CSV');
+                if (d.done < d.total) {
+                    step(d.done);
+                    return;
+                }
+                csvToken = '';
+                hsy_busy(false);
+                hsy_message('#hsy-csv-message', 'Importación del CSV terminada: ' + stats.ok + ' productos actualizados' +
+                    (stats.errors ? ', ' + stats.errors + ' con error (' + stats.last + ')' : '') + '.', stats.errors ? 'error' : 'ok');
+                hsy_refresh_pending();
+            }, function (error) {
+                hsy_busy(false);
+                hsy_message('#hsy-csv-message', error, 'error');
+            });
+        }
+        step(0);
+    });
+
     // Al abrir la página se muestra el último catálogo leído (sin pedirlo al origen).
     if ($('#hsy-rows').length) {
         hsy_post('rows', {}).then(hsy_set_rows);

@@ -4,6 +4,13 @@ Todos los cambios importantes del plugin Host Seeystems. Formato basado en [Keep
 
 > ✍️ Antes de publicar, agrega arriba una sección `## [Sin publicar]` con los cambios. `npm run push-v -- patch|minor|major` la renombra a `## [X.Y.Z] - fecha`, y no publica si esa sección no existe.
 
+## [1.7.0] - 2026-11-27
+
+### ✨ Añadido
+- 📤 **Contenido por CSV** (pestaña Productos → «Contenido por CSV»), para redactar los textos fuera del sitio cuando la IA gratuita no alcanza:
+  - **Exportar CSV**: una fila por producto importado (por defecto solo los que tienen contenido faltante) con sus datos (`contexto`, `tipo_producto`, `marca`, `genero`, `categorias`, `falta`…) y columnas vacías para rellenar: `intro`, `beneficios` (uno por línea o separados por `||`), `caracteristicas` y `descripcion_corta`. UTF-8 con BOM (Excel).
+  - **Importar CSV**: vista previa sin escribir nada (cuántos se actualizan, se saltan o tienen error, con el motivo por línea) y «Aplicar» por lotes, con la tabla actualizándose en vivo. La descripción se arma con la misma estructura fija que la IA (beneficios, características, tabla de especificaciones y cierre). Modo «solo rellenar lo que falta» (por defecto) o «reemplazar». Acepta también una columna `descripcion_html` ya armada y separadores `,` `;` o tabulador.
+
 ## [1.6.2] - 2026-11-26
 
 ### 🔄 Cambiado

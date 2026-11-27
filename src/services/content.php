@@ -793,6 +793,14 @@ SALIDA (texto plano, una sola línea, sin formato):";
     /**
      * Limpia la respuesta: quita bloques ```html … ```, deja solo ALLOWED_TAGS y añade <p> si es texto plano.
      */
+    /**
+     * HTML limpio (mismas reglas que la respuesta de la IA): para textos que vienen de fuera (CSV).
+     */
+    public static function clean_html($text)
+    {
+        return self::html($text);
+    }
+
     private static function html($text)
     {
         $text = preg_replace('/^\s*```[a-z]*\s*|\s*```\s*$/i', '', trim($text));

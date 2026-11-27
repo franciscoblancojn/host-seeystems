@@ -9,6 +9,7 @@ require_once HSY_DIR . 'src/services/describer.php';
 require_once HSY_DIR . 'src/services/layout.php';
 require_once HSY_DIR . 'src/services/content.php';
 require_once HSY_DIR . 'src/services/stats.php';
+require_once HSY_DIR . 'src/services/csv.php';
 require_once HSY_DIR . 'src/services/brands.php';
 require_once HSY_DIR . 'src/services/categories.php';
 require_once HSY_DIR . 'src/services/importer.php';

@@ -26,6 +26,41 @@ $catalog = new HSY_USE_DATA_CATALOG();
                 title="Publica los productos importados en borrador con contenido completo: descripción, descripción corta y categorías">Publicar productos con contenido (<span data-stat="publishable">0</span>)</button>
         </div>
     </div>
+    <details class="hsy-csv">
+        <summary><strong>Contenido por CSV</strong> <span class="hsy-muted">— exportar los productos, redactar los textos fuera del sitio e importarlos</span></summary>
+        <div class="hsy-csv__body">
+            <div class="hsy-csv__step">
+                <h4>1. Exportar</h4>
+                <p>
+                    <label><input type="checkbox" id="hsy-csv-missing" checked> Solo productos con contenido faltante</label>
+                </p>
+                <p>
+                    <a class="button" id="hsy-csv-export"
+                        data-base="<?= esc_url(wp_nonce_url(admin_url('admin-post.php?action=' . HSY_API_CSV::EXPORT), HSY_API_CSV::EXPORT)) ?>"
+                        href="<?= esc_url(wp_nonce_url(admin_url('admin-post.php?action=' . HSY_API_CSV::EXPORT . '&missing=1'), HSY_API_CSV::EXPORT)) ?>">Exportar CSV</a>
+                </p>
+                <p class="description">Una fila por producto importado con sus datos (<code>contexto</code>, <code>tipo_producto</code>, <code>falta</code>…) y columnas vacías para rellenar:
+                    <code>intro</code>, <code>beneficios</code> (uno por línea o separados por <code>||</code>), <code>caracteristicas</code> y <code>descripcion_corta</code>.</p>
+            </div>
+            <div class="hsy-csv__step">
+                <h4>2. Importar</h4>
+                <p>
+                    <input type="file" id="hsy-csv-file" accept=".csv,text/csv">
+                    <select id="hsy-csv-mode">
+                        <option value="missing">Solo rellenar lo que falta</option>
+                        <option value="replace">Reemplazar aunque ya tenga</option>
+                    </select>
+                    <button type="button" class="button" id="hsy-csv-preview">Vista previa</button>
+                    <span class="spinner" id="hsy-csv-spinner"></span>
+                </p>
+                <div id="hsy-csv-message"></div>
+                <div id="hsy-csv-summary" hidden></div>
+                <p><button type="button" class="button button-primary" id="hsy-csv-apply" hidden>Aplicar</button></p>
+                <p class="description">La descripción se arma con la misma estructura fija que la IA (párrafo, beneficios, características, tabla de especificaciones y cierre). Nada se escribe hasta pulsar «Aplicar».</p>
+            </div>
+        </div>
+    </details>
+
     <div class="hsy-toolbar">
         <button type="button" class="button button-primary" id="hsy-load">Cargar productos del catálogo</button>
         <span class="hsy-muted" id="hsy-fetched"><?= $catalog->fetched_at() ? esc_html('Última lectura: ' . wp_date('Y-m-d H:i', $catalog->fetched_at())) : '' ?></span>

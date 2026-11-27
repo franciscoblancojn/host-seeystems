@@ -366,3 +366,30 @@
 	gap: 4px;
 	padding: 0 6px;
 }
+
+.hsy-page .hsy-csv {
+	margin: 12px 0;
+	padding: 8px 12px;
+	background: #fff;
+	border: 1px solid #dcdcde;
+}
+
+.hsy-page .hsy-csv summary {
+	cursor: pointer;
+}
+
+.hsy-page .hsy-csv__body {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 24px;
+}
+
+.hsy-page .hsy-csv__step {
+	flex: 1 1 360px;
+}
+
+.hsy-page #hsy-csv-summary {
+	max-height: 260px;
+	overflow: auto;
+	margin: 8px 0;
+}

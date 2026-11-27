@@ -33,7 +33,6 @@ add_action('admin_enqueue_scripts', function ($hook) {
         'page' => HSY_KEY,
         'min_stock' => HSY_STOCK::min(),
         'content_batch' => HSY_CONTENT_BATCH,
-        'content_auto' => HSY_CONTENT::enabled() && !empty((new HSY_USE_DATA_CONFIG())->get()['content_after_import']),
         'content_enabled' => HSY_CONTENT::enabled(),
         'currency' => html_entity_decode(get_woocommerce_currency_symbol(), ENT_QUOTES, 'UTF-8'),
         'decimals' => wc_get_price_decimals(),

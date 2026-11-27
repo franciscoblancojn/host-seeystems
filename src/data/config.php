@@ -39,7 +39,6 @@ class HSY_USE_DATA_CONFIG extends HSY_USE_DATA_BASE
         'ai_prompt_short' => '',   // prompt de la descripción corta ('' = HSY_CONTENT::DEFAULT_PROMPT_SHORT)
         'ai_style' => 1,           // la IA elige el estilo (subcategorías: Análogo, Digital…)
         'ai_prompt_style' => '',   // prompt del estilo ('' = HSY_CONTENT::DEFAULT_PROMPT_STYLE)
-        'content_after_import' => 1, // generar lo pendiente justo después de importar
         'describe' => 0,           // buscar en Google (contexto para la IA o descripción directa sin IA)
         'serper_key' => '',
     ];
@@ -176,7 +175,6 @@ class HSY_USE_DATA_CONFIG extends HSY_USE_DATA_BASE
                 $out['description_closing'] = '';
             }
             $out['ai_prompt_short'] = self::prompt($input['ai_prompt_short'] ?? '', HSY_CONTENT::DEFAULT_PROMPT_SHORT);
-            $out['content_after_import'] = empty($input['content_after_import']) ? 0 : 1;
         }
 
         // Secretos: vacío = conservar; casilla <clave>_clear = borrar.

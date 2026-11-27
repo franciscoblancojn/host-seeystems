@@ -200,7 +200,7 @@ $hsy_preview_products = get_posts([
             <ul class="hsy-help">
                 <li>Productos importados <strong>sin descripción</strong>, o cuya <strong>descripción corta</strong> sigue siendo la lista automática de características.</li>
                 <li>Lo escrito a mano o generado antes <strong>nunca se reemplaza</strong>.</li>
-                <li>Se genera justo después de importar (si está marcado abajo) o con el botón «Generar descripciones pendientes» de la pestaña Productos, de a un producto.</li>
+                <li>Se genera al importar si está marcada la casilla «Generar contenido al importar» de la pestaña Productos (activada por defecto), o después con «Generar descripciones y categorías faltantes», de a un producto.</li>
             </ul>
         </td>
     </tr>
@@ -313,10 +313,6 @@ $hsy_preview_products = get_posts([
             <div id="hsy-preview-message"></div>
             <div class="hsy-preview" id="hsy-preview-result" hidden></div>
         </td>
-    </tr>
-    <tr>
-        <th scope="row">Después de importar</th>
-        <td><label><input type="checkbox" name="hsy[content_after_import]" value="1" <?php checked($config['content_after_import'], 1); ?>> Generar las descripciones pendientes de los productos recién importados</label></td>
     </tr>
     <tr>
         <th scope="row">Buscar en Google</th>

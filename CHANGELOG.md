@@ -4,6 +4,14 @@ Todos los cambios importantes del plugin Host Seeystems. Formato basado en [Keep
 
 > ✍️ Antes de publicar, agrega arriba una sección `## [Sin publicar]` con los cambios. `npm run push-v -- patch|minor|major` la renombra a `## [X.Y.Z] - fecha`, y no publica si esa sección no existe.
 
+## [1.6.0] - 2026-11-26
+
+### ✨ Añadido
+- ☑️ Casilla **«Generar contenido al importar»** en la pestaña Productos, activada por defecto. Desactivada, la importación solo importa (sin llamar a la IA) y los productos quedan con «Pendiente de generar con IA» para completarlos después con «Generar descripciones y categorías faltantes». La elección se recuerda en el navegador. Sin IA configurada, sale desactivada.
+
+### 🗑️ Eliminado
+- Ajuste «Después de importar» de la pestaña Importación (`content_after_import`): lo reemplaza la casilla de la pestaña Productos.
+
 ## [1.5.0] - 2026-11-26
 
 ### 🔄 Cambiado

@@ -531,6 +531,33 @@ jQuery(function ($) {
         });
     });
 
+    // Casilla «Generar contenido al importar»: activada por defecto; la elección se recuerda en este navegador.
+    var HSY_AUTO_KEY = 'hsy_auto_content';
+    function hsy_auto_content() {
+        return !!D.content_enabled && $('#hsy-auto-content').is(':checked');
+    }
+    (function () {
+        var $box = $('#hsy-auto-content');
+        if (!$box.length) {
+            return;
+        }
+        if (!D.content_enabled) {
+            $box.prop({ checked: false, disabled: true }).closest('label')
+                .attr('title', 'Activa la IA en Importación → Descripciones para generar contenido al importar.');
+            return;
+        }
+        try {
+            if ('0' === window.localStorage.getItem(HSY_AUTO_KEY)) {
+                $box.prop('checked', false);
+            }
+        } catch (e) {}
+        $box.on('change', function () {
+            try {
+                window.localStorage.setItem(HSY_AUTO_KEY, this.checked ? '1' : '0');
+            } catch (e) {}
+        });
+    }());
+
     /**
      * Importación con dos colas en paralelo:
      * - importación de a D.batch (5) productos;
@@ -541,7 +568,7 @@ jQuery(function ($) {
         if (busy || !ids.length) {
             return;
         }
-        var withAi = !!D.content_auto;
+        var withAi = hsy_auto_content();
         var imp = { total: ids.length, done: 0, errors: 0, running: true };
         var ai = { queue: [], total: 0, done: 0, errors: 0, running: false, last: '' };
         hsy_busy(true);

@@ -40,6 +40,9 @@ $catalog = new HSY_USE_DATA_CATALOG();
             <option value="new">Sin importar</option>
             <option value="imported">Ya importados</option>
         </select>
+        <label class="hsy-auto-content" title="Activada: al importar, la IA genera descripciones, estilo y lo que falte en paralelo. Desactivada: solo importa y los productos quedan «Pendiente de generar con IA».">
+            <input type="checkbox" id="hsy-auto-content" checked> Generar contenido al importar
+        </label>
         <button type="button" class="button" id="hsy-import-selected" disabled>Importar seleccionados (<span id="hsy-selected-count">0</span>)</button>
         <button type="button" class="button" id="hsy-regenerate-selected" disabled title="Vuelve a generar con IA la descripción y la descripción corta de los productos ya importados seleccionados">Regenerar descripciones (<span id="hsy-regenerate-count">0</span>)</button>
         <button type="button" class="button-link" id="hsy-clear-selection" hidden>Quitar selección</button>

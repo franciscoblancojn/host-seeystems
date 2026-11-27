@@ -71,7 +71,7 @@ class HSY_API_IMPORT
         ]);
     }
 
-    /** IDs de los productos importados con descripción o descripción corta pendiente. */
+    /** IDs de los productos importados a los que les falta algo (descripción, corta, estilo o categorías). */
     public static function pending()
     {
         self::guard();

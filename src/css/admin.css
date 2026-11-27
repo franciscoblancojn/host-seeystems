@@ -254,11 +254,11 @@
 	font-size: 12px;
 }
 
-.hsy-page .hsy-stat--without_description .hsy-stat__value {
+.hsy-page .hsy-stat--without_content .hsy-stat__value {
 	color: #8a2424;
 }
 
-.hsy-page .hsy-stat--with_description .hsy-stat__value {
+.hsy-page .hsy-stat--with_content .hsy-stat__value {
 	color: #00703c;
 }
 

@@ -4,6 +4,16 @@ Todos los cambios importantes del plugin Host Seeystems. Formato basado en [Keep
 
 > ✍️ Antes de publicar, agrega arriba una sección `## [Sin publicar]` con los cambios. `npm run push-v -- patch|minor|major` la renombra a `## [X.Y.Z] - fecha`, y no publica si esa sección no existe.
 
+## [1.6.1] - 2026-11-26
+
+### ✨ Añadido
+- 🔎 Filtro **«Con contenido faltante»** en la tabla: productos importados a los que les falta la descripción, la descripción corta o las categorías.
+
+### 🔄 Cambiado
+- 🔢 «Generar descripciones y categorías faltantes» va **de menos a más faltantes**: primero los productos a los que les falta 1 cosa (p. ej. solo la descripción corta), después los de 2 y al final los vacíos (3); los que solo esperan el estilo van al principio. A igualdad, por ID.
+- 📊 Los contadores «Con descripción / Sin descripción» pasan a **«Con contenido» / «Sin contenido»**. Contenido = descripción + descripción corta + categorías (el estilo no cuenta).
+- 🚀 «Publicar productos con descripción» pasa a **«Publicar productos con contenido (N)»**: solo publica borradores importados con las tres cosas; un producto sin categorías ya no se publica.
+
 ## [1.6.0] - 2026-11-26
 
 ### ✨ Añadido

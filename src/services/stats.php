@@ -3,8 +3,8 @@
 /**
  * Contadores de la pestaña Productos y publicación de los borradores listos.
  *
- * «Con descripción» usa la misma regla que el badge de la tabla (HSY_CONTENT): un producto
- * importado tiene descripción si no está pendiente (descripción y descripción corta definitivas).
+ * «Con contenido» = producto importado con descripción, descripción corta (definitivas, misma regla
+ * que el badge de la tabla) y categorías. Solo esos se publican.
  */
 class HSY_STATS
 {
@@ -19,19 +19,26 @@ class HSY_STATS
     {
         global $wpdb;
         $rows = $wpdb->get_results($wpdb->prepare(
-            "SELECT p.ID, p.post_status, TRIM(p.post_content) = '' AS no_description, p.post_excerpt, sa.meta_value AS short_auto
+            "SELECT p.ID, p.post_status, TRIM(p.post_content) = '' AS no_description, p.post_excerpt, sa.meta_value AS short_auto,
+                    (SELECT COUNT(*) FROM {$wpdb->term_relationships} tr
+                     INNER JOIN {$wpdb->term_taxonomy} tt ON tt.term_taxonomy_id = tr.term_taxonomy_id
+                     WHERE tr.object_id = p.ID AND tt.taxonomy = 'product_cat' AND tt.term_id <> %d) AS categories
              FROM {$wpdb->posts} p
              INNER JOIN {$wpdb->postmeta} imp ON imp.post_id = p.ID AND imp.meta_key = %s AND imp.meta_value = 'yes'
              LEFT JOIN {$wpdb->postmeta} sa ON sa.post_id = p.ID AND sa.meta_key = %s
              WHERE p.post_type = 'product' AND p.post_status NOT IN ('trash', 'auto-draft')",
+            (int) get_option('default_product_cat', 0),
             HSY_IMPORTED_META,
             HSY_SHORT_AUTO_META
         ));
         $out = [];
         foreach ($rows as $row) {
+            // Contenido completo = descripción + descripción corta + categorías (el estilo no cuenta).
             $out[(int) $row->ID] = [
                 'status' => $row->post_status,
-                'pending' => (bool) $row->no_description || HSY_CONTENT::short_pending_raw($row->post_excerpt, $row->short_auto),
+                'pending' => (bool) $row->no_description
+                    || HSY_CONTENT::short_pending_raw($row->post_excerpt, $row->short_auto)
+                    || 0 === (int) $row->categories,
             ];
         }
         return $out;
@@ -65,15 +72,15 @@ class HSY_STATS
             'total' => count($catalog),
             'imported' => count($imported),
             'not_imported' => $not_imported,
-            'with_description' => $with,
-            'without_description' => count($imported) - $with,
+            'with_content' => $with,
+            'without_content' => count($imported) - $with,
             'draft' => $draft,
             'publishable' => count(self::publishable_ids($imported)),
         ];
     }
 
     /**
-     * IDs de los productos importados en borrador que ya tienen descripción.
+     * IDs de los productos importados en borrador con contenido completo.
      */
     public static function publishable_ids($imported = null)
     {
@@ -87,7 +94,7 @@ class HSY_STATS
     }
 
     /**
-     * Publica un producto si sigue cumpliendo las condiciones (importado, borrador, con descripción).
+     * Publica un producto si sigue cumpliendo las condiciones (importado, borrador, con contenido completo).
      * Devuelve true o WP_Error.
      */
     public static function publish($product_id)
@@ -101,6 +108,9 @@ class HSY_STATS
         }
         if (HSY_CONTENT::is_pending($product)) {
             return new WP_Error('hsy_publish_pending', 'El producto #' . (int) $product_id . ' no tiene descripción.');
+        }
+        if (!HSY_CATEGORIES::has_categories($product)) {
+            return new WP_Error('hsy_publish_categories', 'El producto #' . (int) $product_id . ' no tiene categorías.');
         }
         $product->set_status('publish');
         $product->save();

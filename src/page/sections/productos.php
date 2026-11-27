@@ -12,8 +12,8 @@ $catalog = new HSY_USE_DATA_CATALOG();
             'total' => 'Total productos',
             'imported' => 'Importados',
             'not_imported' => 'Pendientes de importar',
-            'with_description' => 'Con descripción',
-            'without_description' => 'Sin descripción',
+            'with_content' => 'Con contenido',
+            'without_content' => 'Sin contenido',
             'draft' => 'Borrador',
         ] as $hsy_key => $hsy_label) : ?>
             <div class="hsy-stat hsy-stat--<?= esc_attr($hsy_key) ?>">
@@ -23,7 +23,7 @@ $catalog = new HSY_USE_DATA_CATALOG();
         <?php endforeach; ?>
         <div class="hsy-stat hsy-stat--action">
             <button type="button" class="button button-primary" id="hsy-publish" disabled
-                title="Publica los productos importados que están en borrador y ya tienen descripción y descripción corta">Publicar productos con descripción (<span data-stat="publishable">0</span>)</button>
+                title="Publica los productos importados en borrador con contenido completo: descripción, descripción corta y categorías">Publicar productos con contenido (<span data-stat="publishable">0</span>)</button>
         </div>
     </div>
     <div class="hsy-toolbar">
@@ -39,6 +39,7 @@ $catalog = new HSY_USE_DATA_CATALOG();
             <option value="">Todos</option>
             <option value="new">Sin importar</option>
             <option value="imported">Ya importados</option>
+            <option value="incomplete">Con contenido faltante</option>
         </select>
         <label class="hsy-auto-content" title="Activada: al importar, la IA genera descripciones, estilo y lo que falte en paralelo. Desactivada: solo importa y los productos quedan «Pendiente de generar con IA».">
             <input type="checkbox" id="hsy-auto-content" checked> Generar contenido al importar

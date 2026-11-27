@@ -164,6 +164,11 @@ jQuery(function ($) {
             if (filter === 'imported' && !row.product_id) {
                 return false;
             }
+            // Con contenido faltante: importado al que le falta descripción, corta o categorías.
+            if (filter === 'incomplete' && (!row.product_id ||
+                !(row.description_pending || row.short_pending || !(row.categories || []).length))) {
+                return false;
+            }
             return !q || (row.name + ' ' + row.sku + ' ' + row.brand + ' ' + row.availability).toLowerCase().indexOf(q) !== -1;
         });
     }
@@ -425,7 +430,7 @@ jQuery(function ($) {
         }
         hsy_post('publishable', {}).then(function (ids) {
             if (!ids.length) {
-                hsy_message('#hsy-message', 'No hay borradores importados con descripción.', 'info');
+                hsy_message('#hsy-message', 'No hay borradores importados con contenido completo.', 'info');
                 return;
             }
             if (!window.confirm('¿Publicar ' + ids.length + ' productos? Pasan de borrador a publicados y se verán en la tienda.')) {

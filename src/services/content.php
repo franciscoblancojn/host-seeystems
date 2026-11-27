@@ -162,32 +162,40 @@ class HSY_CONTENT
 
     /**
      * IDs de los productos importados con algo pendiente (una consulta): descripción, descripción corta,
-     * estilo o categorías (sin ninguna, salvo «Sin categorizar»).
+     * estilo o categorías (sin ninguna, salvo «Sin categorizar»). Ordenados de menos a más faltantes.
      */
     public static function pending_ids($limit = 2000)
     {
         global $wpdb;
         // El estilo solo cuenta como pendiente si la IA lo clasifica (ajuste ai_style).
         $style = !empty((new HSY_USE_DATA_CONFIG())->get()['ai_style']) ? 'pending' : '__off__';
+        // Qué le falta a cada producto (1/0) y orden: primero los que tienen menos faltantes de las tres
+        // (descripción, corta, categorías; los que solo esperan el estilo tienen 0) y, a igualdad, por ID.
         return array_map('intval', $wpdb->get_col($wpdb->prepare(
-            "SELECT p.ID FROM {$wpdb->posts} p
-             INNER JOIN {$wpdb->postmeta} imp ON imp.post_id = p.ID AND imp.meta_key = %s AND imp.meta_value = 'yes'
-             LEFT JOIN {$wpdb->postmeta} sa ON sa.post_id = p.ID AND sa.meta_key = %s
-             LEFT JOIN {$wpdb->postmeta} st ON st.post_id = p.ID AND st.meta_key = %s
-             WHERE p.post_type = 'product' AND p.post_status <> 'trash'
-               AND (TRIM(p.post_content) = '' OR TRIM(p.post_excerpt) = '' OR sa.meta_value = 'yes'
-                    OR (sa.meta_value IS NULL AND p.post_excerpt LIKE '<ul><li><strong>%%')
-                    OR st.meta_value = %s
-                    OR NOT EXISTS (
+            "SELECT x.ID FROM (
+                SELECT p.ID,
+                    IF(TRIM(p.post_content) = '', 1, 0) AS no_description,
+                    IF(TRIM(p.post_excerpt) = '' OR sa.meta_value = 'yes'
+                       OR (sa.meta_value IS NULL AND p.post_excerpt LIKE '<ul><li><strong>%%'), 1, 0) AS no_short,
+                    IF(NOT EXISTS (
                         SELECT 1 FROM {$wpdb->term_relationships} tr
                         INNER JOIN {$wpdb->term_taxonomy} tt ON tt.term_taxonomy_id = tr.term_taxonomy_id
-                        WHERE tr.object_id = p.ID AND tt.taxonomy = 'product_cat' AND tt.term_id <> %d))
-             ORDER BY p.ID ASC LIMIT %d",
+                        WHERE tr.object_id = p.ID AND tt.taxonomy = 'product_cat' AND tt.term_id <> %d), 1, 0) AS no_categories,
+                    IF(st.meta_value = %s, 1, 0) AS no_style
+                FROM {$wpdb->posts} p
+                INNER JOIN {$wpdb->postmeta} imp ON imp.post_id = p.ID AND imp.meta_key = %s AND imp.meta_value = 'yes'
+                LEFT JOIN {$wpdb->postmeta} sa ON sa.post_id = p.ID AND sa.meta_key = %s
+                LEFT JOIN {$wpdb->postmeta} st ON st.post_id = p.ID AND st.meta_key = %s
+                WHERE p.post_type = 'product' AND p.post_status <> 'trash'
+             ) x
+             WHERE x.no_description + x.no_short + x.no_categories + x.no_style > 0
+             ORDER BY (x.no_description + x.no_short + x.no_categories) ASC, x.ID ASC
+             LIMIT %d",
+            (int) get_option('default_product_cat', 0),
+            $style,
             HSY_IMPORTED_META,
             HSY_SHORT_AUTO_META,
             HSY_STYLE_META,
-            $style,
-            (int) get_option('default_product_cat', 0),
             $limit
         )));
     }

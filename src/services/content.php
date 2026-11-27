@@ -43,6 +43,17 @@ class HSY_CONTENT
         'td' => ['style' => true, 'colspan' => true],
     ];
 
+    /**
+     * Errores que significan «no hay ninguna IA disponible» (todas en pausa, sin cuota o mal configuradas):
+     * los demás productos fallarían igual, así que la cola se detiene.
+     */
+    const STOP_CODES = ['hsy_ai', 'hsy_ai_paused', 'hsy_content_off'];
+
+    public static function is_stop_error($error)
+    {
+        return is_wp_error($error) && in_array($error->get_error_code(), self::STOP_CODES, true);
+    }
+
     /** ¿Está el plugin IA Conector activo? */
     public static function ai_available()
     {
@@ -341,7 +352,8 @@ SALIDA (texto plano, una sola línea, sin formato):";
             $generated = self::generate($product, $web, $config, $need_description, $need_short);
             if (is_wp_error($generated)) {
                 HSY_LOG_SERVICE::add('content_error', ['product_id' => $product->get_id(), 'message' => $generated->get_error_message()]);
-                return $generated;
+                // Lo que se alcanzó a hacer (p. ej. categorías) va en los datos del error: cuenta como parcial.
+                return new WP_Error($generated->get_error_code(), $generated->get_error_message(), ['fields' => $done]);
             }
             if ($need_description && '' !== $generated['description']) {
                 $product->set_description($generated['description']);
@@ -366,6 +378,15 @@ SALIDA (texto plano, una sola línea, sin formato):";
         // Estilo (subcategorías) elegido por la IA entre las opciones del producto.
         if ($need_style) {
             $style = self::classify_style($product, $web, $config);
+            if (is_wp_error($style) && self::is_stop_error($style)) {
+                // Ninguna IA disponible: se guarda lo ya generado y se avisa para detener la cola.
+                if ($fields) {
+                    $product->update_meta_data('_hsy_content_at', time());
+                    $product->save();
+                }
+                HSY_LOG_SERVICE::add('content_error', ['product_id' => $product->get_id(), 'message' => $style->get_error_message()]);
+                return new WP_Error($style->get_error_code(), 'Estilo: ' . $style->get_error_message(), ['fields' => $fields]);
+            }
             if (is_wp_error($style)) {
                 $warnings[] = 'Estilo: ' . $style->get_error_message();
             } else {

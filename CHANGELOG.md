@@ -4,6 +4,12 @@ Todos los cambios importantes del plugin Host Seeystems. Formato basado en [Keep
 
 > ✍️ Antes de publicar, agrega arriba una sección `## [Sin publicar]` con los cambios. `npm run push-v -- patch|minor|major` la renombra a `## [X.Y.Z] - fecha`, y no publica si esa sección no existe.
 
+## [1.6.2] - 2026-11-26
+
+### 🔄 Cambiado
+- 🛑 **Parada automática cuando no queda ninguna IA**: si en un producto ninguna conexión responde (todas en pausa por límite de uso, sin cuota o mal configuradas), la cola se detiene ahí mismo en vez de seguir fallando con el resto. Mensaje: «Detenido: ninguna IA disponible (…). Quedan N sin procesar». Al importar, la importación sigue y solo se detiene la cola de IA (lo que queda sigue «Pendiente de generar con IA»).
+- 📊 Resultado en tres grupos: completos, **parciales** (se asignaron las categorías pero falló la IA) y con error. Antes los parciales contaban como error.
+
 ## [1.6.1] - 2026-11-26
 
 ### ✨ Añadido

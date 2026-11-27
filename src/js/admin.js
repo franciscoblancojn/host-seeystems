@@ -481,11 +481,37 @@ jQuery(function ($) {
     }
 
     // Genera descripción y descripción corta de los productos indicados, de a D.content_batch.
+    // Resultado de un producto en las colas de IA: ok / parcial (p. ej. categorías asignadas) / error.
+    // Devuelve true si hay que detener la cola (ninguna IA disponible).
+    function hsy_tally(result, stats) {
+        hsy_apply_content(result);
+        if (result.ok) {
+            stats.ok++;
+        } else if (result.partial && result.partial.length) {
+            stats.partial++;
+            stats.last = result.message;
+        } else {
+            stats.errors++;
+            stats.last = result.message;
+        }
+        return !!result.stop;
+    }
+
+    function hsy_tally_text(stats) {
+        return stats.ok + ' completos' +
+            (stats.partial ? ', ' + stats.partial + ' parciales (categorías asignadas, sin texto de IA)' : '') +
+            (stats.errors ? ', ' + stats.errors + ' con error' : '');
+    }
+
+    /**
+     * Cola de IA de a D.content_batch: «Generar faltantes» o «Regenerar» ($force).
+     * Si ninguna IA responde (todas en pausa / sin cuota / mal configuradas) se detiene ahí mismo.
+     */
     function hsy_content(productIds, done, force) {
         var total = productIds.length;
         var count = 0;
-        var errors = 0;
-        var last = '';
+        var stats = { ok: 0, partial: 0, errors: 0, last: '' };
+        var stopped = false;
         if (!total) {
             done();
             return;
@@ -496,10 +522,16 @@ jQuery(function ($) {
         hsy_message('#hsy-message', (force ? 'Regenerando descripciones de ' : 'Completando lo que les falta a ') + total + ' productos…', 'info');
 
         function next() {
-            if (!productIds.length) {
+            if (stopped || !productIds.length) {
                 hsy_busy(false);
-                hsy_message('#hsy-message', (force ? 'Descripciones regeneradas: ' : 'Productos completados: ') + (total - errors) + ' correctos' +
-                    (errors ? ', ' + errors + ' con error (' + last + ').' : '.'), errors ? 'error' : 'ok');
+                var text = (force ? 'Descripciones regeneradas: ' : 'Productos procesados: ') + hsy_tally_text(stats) + '.';
+                if (stopped) {
+                    text = 'Detenido: ninguna IA disponible (' + stats.last + '). ' + text + ' Quedan ' + productIds.length +
+                        ' sin procesar: vuelve a intentarlo cuando las IA salgan de la pausa o añade otra conexión.';
+                } else if (stats.last) {
+                    text += ' Último error: ' + stats.last;
+                }
+                hsy_message('#hsy-message', text, stopped || stats.errors ? 'error' : 'ok');
                 hsy_refresh_pending();
                 done();
                 return;
@@ -507,15 +539,13 @@ jQuery(function ($) {
             var batch = productIds.splice(0, D.content_batch || 1);
             hsy_post('content', { ids: batch, force: force ? 1 : 0 }).then(function (results) {
                 for (var i = 0; i < results.length; i++) {
-                    hsy_apply_content(results[i]);
-                    if (!results[i].ok) {
-                        errors++;
-                        last = results[i].message;
+                    if (hsy_tally(results[i], stats)) {
+                        stopped = true;
                     }
                 }
             }, function (error) {
-                errors += batch.length;
-                last = error;
+                stats.errors += batch.length;
+                stats.last = error;
             }).always(function () {
                 count += batch.length;
                 hsy_progress(count, total);
@@ -575,7 +605,7 @@ jQuery(function ($) {
         }
         var withAi = hsy_auto_content();
         var imp = { total: ids.length, done: 0, errors: 0, running: true };
-        var ai = { queue: [], total: 0, done: 0, errors: 0, running: false, last: '' };
+        var ai = { queue: [], total: 0, done: 0, running: false, stopped: false, stats: { ok: 0, partial: 0, errors: 0, last: '' } };
         hsy_busy(true);
         hsy_progress(0, imp.total, '#hsy-progress', 'Importación');
         $('#hsy-progress-ai').prop('hidden', true);
@@ -585,10 +615,14 @@ jQuery(function ($) {
             var text = (final ? 'Terminado. ' : '') + 'Importación: ' + imp.done + '/' + imp.total +
                 (imp.errors ? ' (' + imp.errors + ' con error)' : '');
             if (withAi) {
-                text += ' · Descripciones con IA: ' + ai.done + '/' + ai.total +
-                    (ai.errors ? ' (' + ai.errors + ' con error: ' + ai.last + ')' : '');
+                text += ' · IA: ' + ai.done + '/' + ai.total + ' (' + hsy_tally_text(ai.stats) + ')';
+                if (ai.stopped) {
+                    text += ' · IA detenida: ninguna IA disponible (' + ai.stats.last + '). Los productos que quedan siguen «Pendiente de generar con IA»';
+                } else if (ai.stats.last) {
+                    text += ' · Último error: ' + ai.stats.last;
+                }
             }
-            hsy_message('#hsy-message', text + (final ? '' : '…'), final ? (imp.errors || ai.errors ? 'error' : 'ok') : 'info');
+            hsy_message('#hsy-message', text + (final ? '' : '…'), final ? (imp.errors || ai.stats.errors || ai.stopped ? 'error' : 'ok') : 'info');
         }
 
         function finish() {
@@ -610,15 +644,15 @@ jQuery(function ($) {
             var batch = ai.queue.splice(0, D.content_batch || 1);
             hsy_post('content', { ids: batch }).then(function (results) {
                 for (var i = 0; i < results.length; i++) {
-                    hsy_apply_content(results[i]);
-                    if (!results[i].ok) {
-                        ai.errors++;
-                        ai.last = results[i].message;
+                    if (hsy_tally(results[i], ai.stats)) {
+                        // Ninguna IA disponible: se vacía la cola de IA; la importación sigue.
+                        ai.stopped = true;
+                        ai.queue = [];
                     }
                 }
             }, function (error) {
-                ai.errors += batch.length;
-                ai.last = error;
+                ai.stats.errors += batch.length;
+                ai.stats.last = error;
             }).always(function () {
                 ai.done += batch.length;
                 hsy_progress(ai.done, ai.total, '#hsy-progress-ai', 'IA');
@@ -628,7 +662,7 @@ jQuery(function ($) {
         }
 
         function aiAdd(productIds) {
-            if (!withAi || !productIds.length) {
+            if (!withAi || ai.stopped || !productIds.length) {
                 return;
             }
             ai.queue = ai.queue.concat(productIds);

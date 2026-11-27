@@ -161,9 +161,21 @@ class HSY_API_IMPORT
         $results = [];
         foreach ($ids as $id) {
             $result = HSY_CONTENT::fill($id, $config, $force);
-            $results[] = is_wp_error($result)
-                ? ['product_id' => $id, 'ok' => false, 'message' => $result->get_error_message()]
-                : ['product_id' => $id, 'ok' => true, 'fields' => $result['fields'], 'source' => $result['source'], 'message' => implode(' · ', $result['warnings'])];
+            if (is_wp_error($result)) {
+                $data = (array) $result->get_error_data();
+                $results[] = [
+                    'product_id' => $id,
+                    'ok' => false,
+                    'message' => $result->get_error_message(),
+                    'partial' => array_values((array) ($data['fields'] ?? [])), // lo que sí se hizo (p. ej. categorías)
+                    'stop' => HSY_CONTENT::is_stop_error($result),            // ninguna IA disponible: detener la cola
+                ];
+                if (HSY_CONTENT::is_stop_error($result)) {
+                    break;
+                }
+                continue;
+            }
+            $results[] = ['product_id' => $id, 'ok' => true, 'fields' => $result['fields'], 'source' => $result['source'], 'message' => implode(' · ', $result['warnings'])];
         }
         // Textos ya guardados de cada producto, para repintar su fila en la tabla sin recargarla.
         $texts = HSY_CONTENT::texts($ids);

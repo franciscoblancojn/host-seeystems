@@ -18,6 +18,7 @@ class HSY_API_IMPORT
         add_action('wp_ajax_hsy_content', [self::class, 'content']);
         add_action('wp_ajax_hsy_preview', [self::class, 'preview']);
         add_action('wp_ajax_hsy_ai_resume', [self::class, 'ai_resume']);
+        add_action('wp_ajax_hsy_reset_prompts', [self::class, 'reset_prompts']);
         add_action('wp_ajax_hsy_publishable', [self::class, 'publishable']);
         add_action('wp_ajax_hsy_publish', [self::class, 'publish']);
     }
@@ -100,6 +101,20 @@ class HSY_API_IMPORT
                 : ['product_id' => $id, 'ok' => true];
         }
         wp_send_json_success($results);
+    }
+
+    /** Restablece los prompts (descripción, corta, estilo) y el cierre de la descripción a los de por defecto. */
+    public static function reset_prompts()
+    {
+        self::guard();
+        $data = new HSY_USE_DATA_CONFIG();
+        $config = $data->get_saved();
+        foreach (['ai_prompt_description', 'ai_prompt_short', 'ai_prompt_style', 'description_closing'] as $key) {
+            $config[$key] = ''; // vacío = el de por defecto (y sigue sus mejoras en próximas versiones)
+        }
+        $data->set($config);
+        HSY_LOG_SERVICE::add('prompts_restablecidos', []);
+        wp_send_json_success('Prompts restablecidos a los de por defecto.');
     }
 
     /** Quita la pausa por límite de uso de una conexión de IA. */

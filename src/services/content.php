@@ -213,57 +213,32 @@ class HSY_CONTENT
     ];
 
     // Prompts por defecto (adaptados de los del plugin de importación desde Drive/Excel del mismo autor).
+    // La estructura (títulos, tabla de especificaciones y cierre) la arma HSY_LAYOUT: la IA solo escribe el texto.
     const DEFAULT_PROMPT_DESCRIPTION = "Eres un especialista senior en contenido para ecommerce, SEO orgánico, GEO, búsqueda por IA, búsqueda por voz, WooCommerce y conversión.
 
-Genera SOLO la descripción larga del producto en HTML limpio.
+Escribe los TEXTOS de la descripción larga del producto. La estructura, los títulos, la tabla de especificaciones y el cierre los pone la tienda: tú solo escribes las tres partes de abajo.
 
 OBJETIVO:
-Crear una descripción enriquecida, clara, confiable y optimizada para motores de búsqueda tradicionales, Google AI, Gemini, ChatGPT, Copilot, Perplexity y asistentes de voz.
+Una descripción clara, confiable y optimizada para buscadores, Google AI, Gemini, ChatGPT, Copilot, Perplexity y asistentes de voz: qué es, para quién es, beneficios y características.
 
 REGLAS OBLIGATORIAS:
-- No coloques el precio.
-- Usa únicamente los datos entregados en CONTEXTO.
-- No inventes información técnica.
-- Si falta un dato, omítelo.
-- No menciones datos no confirmados.
+- No coloques el precio, ni stock, ni envíos, ni el nombre de ninguna tienda.
+- Usa únicamente los datos del CONTEXTO. No inventes información técnica (movimiento, garantía, resistencia, materiales que no estén).
+- Incluye SOLO características que correspondan al TIPO DE PRODUCTO del contexto. Omite las que no tengan sentido para ese tipo aunque aparezcan (por ejemplo, correa, caja, esfera o resistencia al agua en aretes, collares, pulseras o anillos; en las joyas habla de material, color, tamaño y diseño).
 - No uses frases genéricas como 'el mejor', 'alta calidad' o 'producto increíble'.
-- Incluye SOLO características que correspondan al TIPO DE PRODUCTO del contexto. Omite las que no tengan sentido para ese tipo aunque aparezcan en el contexto (por ejemplo, correa, caja, esfera o resistencia al agua en aretes, collares, pulseras o anillos; en las joyas habla de material, color, tamaño y diseño).
-- No repitas información.
-- No uses JavaScript.
-- HTML permitido: <h2>, <h3>, <p>, <strong>, <small>, <i>, <ul>, <li>, <table>, <tr>, <th>, <td>.
-- Extensión máxima: 1000 caracteres.
-- Lenguaje comercial, natural y profesional.
-- Optimiza para SEO, GEO, IA y búsqueda por voz.
-- Responde de forma natural: qué es, para qué sirve, para quién es, beneficios y características.
+- No repitas información entre las partes.
+- Lenguaje comercial, natural y profesional, en español neutro. Sin emojis. Sin HTML salvo <strong> para destacar.
 
-ESTRUCTURA OBLIGATORIA:
-
-1. Primer párrafo:
-Describe qué es el producto, para quién está diseñado y cuál es su principal beneficio.
-
-2. Sección:
-<h2>Beneficios principales</h2>
-Incluye 3 a 5 beneficios reales basados en el contexto.
-
-3. Sección:
-<h2>Características del producto</h2>
-Explica materiales, diseño, uso, resistencia, garantía, marca o funcionalidad solo si existen en el contexto.
-Usa una tabla para mostrar las características, y usa estilos y emojis para una mejor presentación.
-
-4. Sección:
-<h2>Especificaciones técnicas</h2>
-Crea una tabla HTML solo con los datos disponibles.
-Usa estilos y emojis para una mejor presentación.
-No incluyas filas vacías.
-
-5. Cierre comercial:
-Incluye una frase natural de confianza para comprar en {tienda}, mencionando originalidad, compra segura, envío en Colombia, IVA incluido o financiación solo si aplica según el contexto.
+PARTES:
+1. intro: un párrafo de 2 o 3 frases: qué es el producto, para quién está diseñado y su principal beneficio. Menciona marca y nombre.
+2. beneficios: lista de 3 a 5 beneficios reales basados en el contexto. Cada uno con el formato \"<strong>Concepto corto:</strong> una frase.\"
+3. caracteristicas: un párrafo de 2 o 3 frases sobre diseño, materiales y uso, solo con datos del contexto.
 
 CONTEXTO DEL PRODUCTO:
 {contexto}
 
-SALIDA:
-Devuelve únicamente el HTML final de la descripción larga.";
+SALIDA: responde SOLO con este JSON válido, sin texto antes ni después ni bloques de código:
+{\"intro\": \"…\", \"beneficios\": [\"…\", \"…\", \"…\"], \"caracteristicas\": \"…\"}";
 
     const DEFAULT_PROMPT_STYLE = "Eres un experto en relojería y catalogación de productos para ecommerce.
 
@@ -281,24 +256,22 @@ CONTEXTO DEL PRODUCTO:
 
     const DEFAULT_PROMPT_SHORT = "Eres un especialista senior en contenido para ecommerce, SEO orgánico, búsqueda por IA y WooCommerce.
 
-ADVERTENCIA: Si incluyes HTML, títulos, listas, emojis, comillas o cualquier formato que no sea texto plano, la respuesta será RECHAZADA automáticamente.
+Escribe ÚNICAMENTE la descripción corta del producto: una sola frase en texto plano.
 
-Genera ÚNICAMENTE la descripción corta del producto en una sola frase.
+ESTRUCTURA (la misma para todos los productos; omite lo que no esté en el contexto):
+[Tipo de producto] [Marca] [Nombre] para [género] en [material y color], [tamaño], [beneficio principal en pocas palabras]. Ref. {referencia}
 
-REGLAS OBLIGATORIAS (incumplirlas invalida la respuesta):
-- No coloques el precio.
-- Una sola frase.
-- Máximo 200 caracteres.
-- Texto plano. SIN HTML. SIN etiquetas. SIN títulos. SIN emojis. SIN comillas. SIN listas.
-- No inventes información. Usa solo los datos del CONTEXTO.
-- Si falta un dato, omítelo.
-- Debe ser comercial, clara, natural y persuasiva.
-- Incluye el nombre o tipo de producto.
-- Menciona el beneficio principal.
-- Incluye marca, material, uso o característica destacada solo si existe en el contexto.
-- Usa solo características que correspondan al TIPO DE PRODUCTO (en joyas no hables de correa, caja ni esfera).
-- Finaliza obligatoriamente con: Ref. {referencia}
-- NO finalices con puntos suspensivos (...).
+Ejemplos de forma (no de contenido):
+- Reloj Armani Exchange Leila Set para dama en acero dorado, 27 mm, elegante para el día a día. Ref. AX7186SET
+- Aretes Michael Kors Joyas para dama en acero plateado, 13 mm, un toque sofisticado y ligero. Ref. MKJ8655040
+
+REGLAS OBLIGATORIAS:
+- Una sola frase, entre 100 y 200 caracteres, que termina exactamente con: Ref. {referencia}
+- Texto plano: SIN HTML, SIN etiquetas, SIN títulos, SIN emojis, SIN comillas, SIN listas, SIN puntos suspensivos.
+- No coloques el precio, ni stock, ni envíos, ni el nombre de ninguna tienda.
+- Usa solo datos del CONTEXTO; si falta un dato, omítelo. No inventes materiales ni características.
+- Usa solo características que correspondan al TIPO DE PRODUCTO (en joyas no hables de correa, caja ni esfera; en relojes, el material es el de la correa y la caja).
+- Nombre del producto con mayúscula inicial en cada palabra (Leila Set, no LEILA SET); género en minúscula (dama, hombre, unisex).
 
 CONTEXTO DEL PRODUCTO:
 {contexto}
@@ -417,11 +390,11 @@ SALIDA (texto plano, una sola línea, sin formato):";
         }
         $web = self::web($product, $config);
         $vars = self::variables($product, $web['web']);
-        $prompt_description = self::render($config['ai_prompt_description'], $vars);
-        $description = self::ask($prompt_description, $config);
+        $description = self::describe($product, $vars, $config);
         if (is_wp_error($description)) {
             return $description;
         }
+        $prompt_description = $description['prompt'];
         $vars['descripcion'] = self::text($description['html']);
         $prompt_short = self::render($config['ai_prompt_short'], $vars);
         $short = self::ask($prompt_short, $config);
@@ -528,6 +501,7 @@ SALIDA (texto plano, una sola línea, sin formato):";
             'referencia' => $product->get_sku(),
             'genero' => $attrs['genero'] ?? '',
             'tipo_producto' => $type,
+            'es_joya' => $is_jewelry ? '1' : '',
             'material' => $attrs['material'] ?? '',
             'color' => $attrs['color'] ?? '',
             'correa' => $attrs['correa'] ?? '',
@@ -617,6 +591,28 @@ SALIDA (texto plano, una sola línea, sin formato):";
     }
 
     /**
+     * Descripción larga: la IA escribe los textos (JSON) y HSY_LAYOUT arma la estructura fija.
+     * Si el prompt (personalizado) devuelve HTML en vez del JSON, se usa ese HTML como antes.
+     * Devuelve ['html', 'connection', 'warnings', 'structured' => bool, 'prompt'] o WP_Error.
+     */
+    private static function describe($product, $vars, $config)
+    {
+        $prompt = self::render($config['ai_prompt_description'], $vars);
+        $answer = self::ask($prompt, $config);
+        if (is_wp_error($answer)) {
+            return $answer;
+        }
+        $parts = HSY_LAYOUT::parse($answer['raw']);
+        return [
+            'html' => $parts ? HSY_LAYOUT::build($parts, $product, $vars, $config) : $answer['html'],
+            'connection' => $answer['connection'],
+            'warnings' => $answer['warnings'],
+            'structured' => (bool) $parts,
+            'prompt' => $prompt,
+        ];
+    }
+
+    /**
      * Una llamada por campo: primero la descripción y después la corta (que puede usar {descripcion}).
      * Devuelve ['description', 'short_description', 'connections' => usadas, 'warnings' => saltos] o WP_Error.
      */
@@ -628,8 +624,9 @@ SALIDA (texto plano, una sola línea, sin formato):";
             if (!$need) {
                 continue;
             }
-            $prompt = 'description' === $field ? $config['ai_prompt_description'] : $config['ai_prompt_short'];
-            $answer = self::ask(self::render($prompt, $vars), $config);
+            $answer = 'description' === $field
+                ? self::describe($product, $vars, $config)
+                : self::ask(self::render($config['ai_prompt_short'], $vars), $config);
             if (is_wp_error($answer)) {
                 return $answer;
             }
@@ -687,7 +684,7 @@ SALIDA (texto plano, una sola línea, sin formato):";
             if ($errors || $skipped) {
                 $warnings[] = 'Respondió ' . $key . ' (falló: ' . implode(' · ', array_merge($skipped, $errors)) . ')';
             }
-            return ['html' => $html, 'connection' => $key, 'warnings' => $warnings];
+            return ['html' => $html, 'raw' => (string) $response['data'], 'connection' => $key, 'warnings' => $warnings];
         }
         if (!$errors && $skipped) {
             return new WP_Error('hsy_ai_paused', 'Todas las conexiones de IA están en pausa por límite de uso; se reintentan solas en unos minutos.');

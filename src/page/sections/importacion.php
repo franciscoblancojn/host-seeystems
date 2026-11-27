@@ -253,6 +253,12 @@ $hsy_preview_products = get_posts([
     <tr>
         <th scope="row">Prompts</th>
         <td>
+            <p>
+                <button type="button" class="button" id="hsy-reset-prompts">Restablecer prompts por defecto</button>
+                <span class="spinner" id="hsy-reset-spinner"></span>
+                <span class="hsy-muted">Vuelve a los prompts de descripción, descripción corta y estilo, y al cierre de la descripción, que trae el plugin. Se guarda al momento.</span>
+            </p>
+            <div id="hsy-reset-message"></div>
             <details class="hsy-vars">
                 <summary>Variables disponibles</summary>
                 <table class="widefat striped">
@@ -269,18 +275,23 @@ $hsy_preview_products = get_posts([
             </details>
 
             <p><label for="hsy-prompt-description"><strong>Prompt de la descripción</strong></label></p>
-            <textarea id="hsy-prompt-description" name="hsy[ai_prompt_description]" rows="14" class="large-text code hsy-prompt-input"
+            <textarea id="hsy-prompt-description" name="hsy[ai_prompt_description]" rows="14" class="large-text code hsy-prompt-input" autocomplete="off"
                 data-default="<?= esc_attr(HSY_CONTENT::DEFAULT_PROMPT_DESCRIPTION) ?>"><?= esc_textarea($config['ai_prompt_description']) ?></textarea>
             <p><button type="button" class="button-link hsy-prompt-reset" data-target="#hsy-prompt-description">Restaurar el prompt por defecto</button></p>
+            <p class="description"><strong>Estructura fija:</strong> la IA solo escribe los textos (JSON con <code>intro</code>, <code>beneficios</code> y <code>caracteristicas</code>) y el plugin arma siempre lo mismo: párrafo inicial, «Beneficios principales», «Características del producto», «Especificaciones técnicas» (una tabla con estilos, filas y emojis fijos, con los datos del producto) y el cierre de abajo. Si cambias el prompt, mantén ese JSON en la salida; si devuelve HTML, se usa tal cual (sin la estructura fija).</p>
+            <p><label for="hsy-description-closing"><strong>Cierre de la descripción</strong></label></p>
+            <input type="text" id="hsy-description-closing" name="hsy[description_closing]" class="large-text" autocomplete="off"
+                value="<?= esc_attr('' !== $config['description_closing'] ? $config['description_closing'] : HSY_LAYOUT::DEFAULT_CLOSING) ?>">
+            <p class="description">Último párrafo de todas las descripciones. Admite variables (<code>{tienda}</code>, <code>{marca}</code>…) y <code>&lt;strong&gt;</code>. Vacío = el de por defecto.</p>
 
             <p><label for="hsy-prompt-short"><strong>Prompt de la descripción corta</strong></label></p>
-            <textarea id="hsy-prompt-short" name="hsy[ai_prompt_short]" rows="10" class="large-text code hsy-prompt-input"
+            <textarea id="hsy-prompt-short" name="hsy[ai_prompt_short]" rows="10" class="large-text code hsy-prompt-input" autocomplete="off"
                 data-default="<?= esc_attr(HSY_CONTENT::DEFAULT_PROMPT_SHORT) ?>"><?= esc_textarea($config['ai_prompt_short']) ?></textarea>
             <p><button type="button" class="button-link hsy-prompt-reset" data-target="#hsy-prompt-short">Restaurar el prompt por defecto</button></p>
 
             <p><label><input type="checkbox" name="hsy[ai_style]" value="1" <?php checked($config['ai_style'], 1); ?>> <strong>Estilo:</strong> que la IA elija las subcategorías (Análogo, Digital, Deportivo…) entre las de la categoría del producto</label></p>
             <p><label for="hsy-prompt-style"><strong>Prompt del estilo</strong></label> <span class="hsy-muted">— usa <code>{opciones}</code> con las subcategorías posibles</span></p>
-            <textarea id="hsy-prompt-style" name="hsy[ai_prompt_style]" rows="10" class="large-text code hsy-prompt-input"
+            <textarea id="hsy-prompt-style" name="hsy[ai_prompt_style]" rows="10" class="large-text code hsy-prompt-input" autocomplete="off"
                 data-default="<?= esc_attr(HSY_CONTENT::DEFAULT_PROMPT_STYLE) ?>"><?= esc_textarea($config['ai_prompt_style']) ?></textarea>
             <p><button type="button" class="button-link hsy-prompt-reset" data-target="#hsy-prompt-style">Restaurar el prompt por defecto</button></p>
 

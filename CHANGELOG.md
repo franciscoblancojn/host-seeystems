@@ -4,6 +4,21 @@ Todos los cambios importantes del plugin Host Seeystems. Formato basado en [Keep
 
 > ✍️ Antes de publicar, agrega arriba una sección `## [Sin publicar]` con los cambios. `npm run push-v -- patch|minor|major` la renombra a `## [X.Y.Z] - fecha`, y no publica si esa sección no existe.
 
+## [1.4.4] - 2026-11-26
+
+### ✨ Añadido
+- 🧱 **Estructura fija de la descripción** (todas iguales): la IA escribe solo los textos (JSON con `intro`, `beneficios` y `caracteristicas`) y el plugin arma párrafo inicial, «Beneficios principales», «Características del producto», «Especificaciones técnicas» y cierre.
+- 📋 **Tabla de especificaciones** generada por el plugin con los datos del producto: una sola tabla, con estilos en línea (bordes, fondo en la columna de etiquetas; no depende del CSS del tema) y filas y emojis fijos. Relojes: Marca, Modelo, Referencia, Género, Correa, Caja, Tamaño, Resistencia al agua. Joyas: Marca, Tipo, Referencia, Género, Material, Color, Tamaño.
+- ✍️ **Cierre de la descripción** configurable (por defecto «Compra con confianza en {tienda}: producto original, compra segura y envío a toda Colombia.»).
+- 🔁 Botón **«Restablecer prompts por defecto»** (Importación → Descripciones): vuelve al momento a los prompts de descripción, descripción corta y estilo, y al cierre, que trae el plugin (se guardan vacíos, así siguen las mejoras de próximas versiones).
+
+### 🔄 Cambiado
+- ✍️ Prompt por defecto de la descripción: pide el JSON con los textos (sin emojis ni tablas). Un prompt propio que devuelva HTML se sigue usando tal cual.
+- ✍️ Prompt por defecto de la descripción corta con una estructura fija para todos: «[Tipo] [Marca] [Nombre] para [género] en [material y color], [tamaño], [beneficio]. Ref. [referencia]» (100–200 caracteres, texto plano, sin datos que no correspondan al tipo de producto).
+
+### 🐛 Corregido
+- Descripciones distintas entre productos: emojis y filas variables, dos tablas con los mismos datos (Material, Color y Tamaño repetidos), nombres inventados («Diámetro», «Nombre») y cierre diferente en cada producto. La tabla tampoco se veía como tabla porque el tema no le da estilos.
+
 ## [1.4.3] - 2026-11-26
 
 ### ✨ Añadido

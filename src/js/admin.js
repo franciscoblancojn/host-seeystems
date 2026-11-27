@@ -526,6 +526,23 @@ jQuery(function ($) {
         el.selectionStart = el.selectionEnd = start + text.length;
     });
 
+    $page.on('click', '#hsy-reset-prompts', function () {
+        if (!window.confirm('¿Restablecer los prompts de descripción, descripción corta y estilo, y el cierre, a los de por defecto? Se pierden los cambios que hayas hecho en ellos.')) {
+            return;
+        }
+        var $btn = $(this).prop('disabled', true);
+        $('#hsy-reset-spinner').addClass('is-active');
+        hsy_post('reset_prompts', {}).then(function (text) {
+            hsy_message('#hsy-reset-message', text + ' Recargando…', 'ok');
+            // Navegación nueva (no reload): al recargar, el navegador vuelve a rellenar el formulario con el texto anterior.
+            window.location.href = window.location.pathname + '?page=' + encodeURIComponent(D.page) + '&tab=importacion&hsy_reset=' + new Date().getTime();
+        }, function (error) {
+            hsy_message('#hsy-reset-message', error, 'error');
+            $btn.prop('disabled', false);
+            $('#hsy-reset-spinner').removeClass('is-active');
+        });
+    });
+
     $page.on('click', '.hsy-prompt-reset', function () {
         var $target = $($(this).data('target'));
         if (window.confirm('¿Restaurar el prompt por defecto? Se pierde el texto actual al guardar.')) {

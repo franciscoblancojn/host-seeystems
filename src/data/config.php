@@ -35,6 +35,7 @@ class HSY_USE_DATA_CONFIG extends HSY_USE_DATA_BASE
         'ai_enabled' => 0,
         'ai_connections' => [],    // keys de conexiones de IA Conector, en orden de prioridad (la 1.ª que responda)
         'ai_prompt_description' => '', // prompt de la descripción ('' = HSY_CONTENT::DEFAULT_PROMPT_DESCRIPTION)
+        'description_closing' => '', // cierre de la descripción ('' = HSY_LAYOUT::DEFAULT_CLOSING); admite {tienda} y demás variables
         'ai_prompt_short' => '',   // prompt de la descripción corta ('' = HSY_CONTENT::DEFAULT_PROMPT_SHORT)
         'ai_style' => 1,           // la IA elige el estilo (subcategorías: Análogo, Digital…)
         'ai_prompt_style' => '',   // prompt del estilo ('' = HSY_CONTENT::DEFAULT_PROMPT_STYLE)
@@ -90,6 +91,14 @@ class HSY_USE_DATA_CONFIG extends HSY_USE_DATA_BASE
         $value = trim(preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', $value));
         $value = mb_substr($value, 0, self::PROMPT_MAX);
         return $value === trim($default) ? '' : $value;
+    }
+
+    /**
+     * Lo guardado tal cual (sin rellenar los prompts por defecto), para reescribirlo.
+     */
+    public function get_saved()
+    {
+        return array_merge(self::DEFAULTS, $this->DATA);
     }
 
     public function set($data)
@@ -162,6 +171,10 @@ class HSY_USE_DATA_CONFIG extends HSY_USE_DATA_BASE
             // Orden del formulario = prioridad. Solo las marcadas.
             $out['ai_connections'] = array_values(array_unique(array_filter(array_map('sanitize_text_field', (array) ($input['ai_connections'] ?? [])), 'strlen')));
             $out['ai_prompt_description'] = self::prompt($input['ai_prompt_description'] ?? '', HSY_CONTENT::DEFAULT_PROMPT_DESCRIPTION);
+            $out['description_closing'] = wp_kses(trim((string) ($input['description_closing'] ?? '')), HSY_LAYOUT::INLINE_TAGS);
+            if ($out['description_closing'] === HSY_LAYOUT::DEFAULT_CLOSING) {
+                $out['description_closing'] = '';
+            }
             $out['ai_prompt_short'] = self::prompt($input['ai_prompt_short'] ?? '', HSY_CONTENT::DEFAULT_PROMPT_SHORT);
             $out['content_after_import'] = empty($input['content_after_import']) ? 0 : 1;
         }

@@ -30,6 +30,7 @@ add_action('admin_enqueue_scripts', function ($hook) {
         'ajax' => admin_url('admin-ajax.php'),
         'nonce' => wp_create_nonce(HSY_API_IMPORT::NONCE),
         'batch' => HSY_BATCH_SIZE,
+        'page' => HSY_KEY,
         'min_stock' => HSY_STOCK::min(),
         'content_batch' => HSY_CONTENT_BATCH,
         'content_auto' => HSY_CONTENT::enabled() && !empty((new HSY_USE_DATA_CONFIG())->get()['content_after_import']),

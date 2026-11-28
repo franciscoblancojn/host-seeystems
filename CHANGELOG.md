@@ -4,6 +4,14 @@ Todos los cambios importantes del plugin Host Seeystems. Formato basado en [Keep
 
 > ✍️ Antes de publicar, agrega arriba una sección `## [Sin publicar]` con los cambios. `npm run push-v -- patch|minor|major` la renombra a `## [X.Y.Z] - fecha`, y no publica si esa sección no existe.
 
+## [1.7.1] - 2026-11-27
+
+### ✨ Añadido
+- 🎯 **Estilo por CSV**: el CSV exportado trae `estilo_opciones` (las subcategorías posibles del producto) y una columna `estilo` para rellenar («Análogo, Elegante»). Al importar se asignan esas subcategorías y se quita el badge «Pendiente de asignar por IA». «estilo» aparece en `falta` cuando está pendiente. Acepta mayúsculas, sin tildes y separadores `,` `;` `/` `|`; un estilo que no esté entre las opciones del producto da error con el motivo.
+
+### 🐛 Corregido
+- La columna Categorías de la tabla ocultaba la categoría por defecto de WooCommerce. Si esa categoría es una real (p. ej. «Relojes»), se veía solo «Mujer». Ahora se muestran todas; «Sin categoría» y el filtro «Con contenido faltante» siguen usando la misma regla (alguna categoría además de la de por defecto).
+
 ## [1.7.0] - 2026-11-27
 
 ### ✨ Añadido

@@ -118,7 +118,7 @@ jQuery(function ($) {
         }
         var cats = row.categories || [];
         var html = '';
-        if (cats.length) {
+        if (cats.length && row.has_categories) {
             var text = cats.join(', ');
             var short = text.length > 30 ? $.trim(text.slice(0, 30)) + '…' : text;
             html = '<span class="hsy-tip" tabindex="0" data-tip="' + hsy_text(cats.join('\n')) + '">' + hsy_text(short) + '</span>';
@@ -166,7 +166,7 @@ jQuery(function ($) {
             }
             // Con contenido faltante: importado al que le falta descripción, corta o categorías.
             if (filter === 'incomplete' && (!row.product_id ||
-                !(row.description_pending || row.short_pending || !(row.categories || []).length))) {
+                !(row.description_pending || row.short_pending || !row.has_categories))) {
                 return false;
             }
             return !q || (row.name + ' ' + row.sku + ' ' + row.brand + ' ' + row.availability).toLowerCase().indexOf(q) !== -1;
@@ -787,7 +787,7 @@ jQuery(function ($) {
             var sm = d.summary;
             csvToken = d.token;
             hsy_message('#hsy-csv-message', 'Vista previa (' + (d.mode === 'replace' ? 'reemplazar' : 'solo faltantes') + '): ' + sm.rows + ' filas → ' +
-                sm.update + ' se actualizarán (' + sm.description + ' descripciones, ' + sm.short + ' descripciones cortas), ' +
+                sm.update + ' se actualizarán (' + sm.description + ' descripciones, ' + sm.short + ' descripciones cortas, ' + (sm.style || 0) + ' estilos), ' +
                 sm.skip + ' se saltan, ' + sm.error + ' con error. Nada se ha escrito todavía.', sm.update ? 'ok' : 'error');
             if (d.issues && d.issues.length) {
                 var html = '<table class="widefat striped"><thead><tr><th>Línea</th><th>Producto</th><th>Qué pasa</th></tr></thead><tbody>';

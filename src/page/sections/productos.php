@@ -40,7 +40,8 @@ $catalog = new HSY_USE_DATA_CATALOG();
                         href="<?= esc_url(wp_nonce_url(admin_url('admin-post.php?action=' . HSY_API_CSV::EXPORT . '&missing=1'), HSY_API_CSV::EXPORT)) ?>">Exportar CSV</a>
                 </p>
                 <p class="description">Una fila por producto importado con sus datos (<code>contexto</code>, <code>tipo_producto</code>, <code>falta</code>…) y columnas vacías para rellenar:
-                    <code>intro</code>, <code>beneficios</code> (uno por línea o separados por <code>||</code>), <code>caracteristicas</code> y <code>descripcion_corta</code>.</p>
+                    <code>intro</code>, <code>beneficios</code> (uno por línea o separados por <code>||</code>), <code>caracteristicas</code>, <code>descripcion_corta</code>
+                    y <code>estilo</code> (subcategorías separadas por coma, elegidas de <code>estilo_opciones</code>, p. ej. «Análogo, Elegante»).</p>
             </div>
             <div class="hsy-csv__step">
                 <h4>2. Importar</h4>

@@ -71,6 +71,7 @@ class HSY_CATALOG_SERVICE
                 'description_pending' => $product_id ? ($texts[$product_id]['description_pending'] ?? true) : false,
                 'short_pending' => $product_id ? ($texts[$product_id]['short_pending'] ?? true) : false,
                 'categories' => $texts[$product_id]['categories'] ?? [],
+                'has_categories' => $texts[$product_id]['has_categories'] ?? false,
                 'style_pending' => $texts[$product_id]['style_pending'] ?? false,
             ];
         }

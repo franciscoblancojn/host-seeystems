@@ -159,7 +159,8 @@ class HSY_CONTENT
                 'short_description' => mb_substr(self::text($row->post_excerpt), 0, self::TEXT_MAX),
                 'description_pending' => '' === $description,
                 'short_pending' => self::short_pending_raw($row->post_excerpt, $row->short_auto),
-                'categories' => $categories[(int) $row->ID] ?? [],
+                'categories' => $categories[(int) $row->ID]['names'] ?? [],
+                'has_categories' => $categories[(int) $row->ID]['has'] ?? false,
                 'style_pending' => $style_on && 'pending' === $row->style,
             ];
         }

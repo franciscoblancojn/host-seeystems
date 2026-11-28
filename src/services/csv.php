@@ -5,7 +5,8 @@
  * (en local, con otra IA o a mano) e importarlos después.
  *
  * Exportar: una fila por producto con sus datos (contexto, lo que le falta) y columnas vacías para
- * rellenar: intro, beneficios (uno por línea o separados por « || »), caracteristicas, descripcion_corta.
+ * rellenar: intro, beneficios (uno por línea o separados por « || »), caracteristicas, descripcion_corta y
+ * estilo (subcategorías separadas por coma, elegidas de estilo_opciones: «Análogo, Elegante»).
  * Importar: con intro (+ beneficios + caracteristicas) se arma la descripción con la estructura fija de
  * HSY_LAYOUT (tabla de especificaciones y cierre incluidos), igual que con la IA. También se acepta una
  * columna descripcion_html ya armada. Modo «faltantes» (por defecto): solo se escribe lo que está vacío
@@ -15,8 +16,8 @@ class HSY_CSV
 {
     const COLUMNS = [
         'product_id', 'sku', 'estado', 'nombre', 'nombre_tienda', 'tipo_producto', 'marca', 'genero',
-        'categorias', 'falta', 'contexto',
-        'intro', 'beneficios', 'caracteristicas', 'descripcion_corta',
+        'categorias', 'falta', 'contexto', 'estilo_opciones',
+        'intro', 'beneficios', 'caracteristicas', 'descripcion_corta', 'estilo',
     ];
 
     /** Filas por petición al aplicar la importación. */
@@ -66,10 +67,12 @@ class HSY_CSV
                 }, $product->get_category_ids())), 'name')),
                 'falta' => implode(', ', $missing),
                 'contexto' => $vars['contexto'],
+                'estilo_opciones' => implode(', ', array_keys(HSY_CATEGORIES::style_options($product))),
                 'intro' => '',
                 'beneficios' => '',
                 'caracteristicas' => '',
                 'descripcion_corta' => '',
+                'estilo' => '',
             ];
             // Liberar memoria en catálogos grandes.
             wc_delete_product_transients($id);
@@ -78,7 +81,7 @@ class HSY_CSV
     }
 
     /**
-     * Qué le falta al producto: descripcion, descripcion_corta, categorias.
+     * Qué le falta al producto: descripcion, descripcion_corta, categorias, estilo.
      */
     public static function missing($product)
     {
@@ -91,6 +94,9 @@ class HSY_CSV
         }
         if (!HSY_CATEGORIES::has_categories($product)) {
             $missing[] = 'categorias';
+        }
+        if ('pending' === $product->get_meta(HSY_STYLE_META)) {
+            $missing[] = 'estilo';
         }
         return $missing;
     }
@@ -130,7 +136,7 @@ class HSY_CSV
         }
         $mode = 'replace' === $mode ? 'replace' : 'missing';
         $plan = [];
-        $summary = ['rows' => count($rows), 'update' => 0, 'skip' => 0, 'error' => 0, 'description' => 0, 'short' => 0];
+        $summary = ['rows' => count($rows), 'update' => 0, 'skip' => 0, 'error' => 0, 'description' => 0, 'short' => 0, 'style' => 0];
         foreach ($rows as $n => $row) {
             $item = self::plan_row($row, $mode);
             $item['line'] = $n + 2; // +1 encabezado, +1 base 1
@@ -139,6 +145,7 @@ class HSY_CSV
             if ('update' === $item['action']) {
                 $summary['description'] += in_array('description', $item['fields'], true) ? 1 : 0;
                 $summary['short'] += in_array('short_description', $item['fields'], true) ? 1 : 0;
+                $summary['style'] += in_array('style', $item['fields'], true) ? 1 : 0;
             }
         }
         $token = wp_generate_password(20, false);
@@ -207,6 +214,7 @@ class HSY_CSV
         }
         $has_description = '' !== trim((string) ($row['intro'] ?? '')) || '' !== trim((string) ($row['descripcion_html'] ?? ''));
         $has_short = '' !== trim((string) ($row['descripcion_corta'] ?? ''));
+        $has_style = '' !== trim((string) ($row['estilo'] ?? ''));
         $fields = [];
         if ($has_description && ('replace' === $mode || '' === trim(wp_strip_all_tags($product->get_description())))) {
             $fields[] = 'description';
@@ -214,8 +222,14 @@ class HSY_CSV
         if ($has_short && ('replace' === $mode || HSY_CONTENT::short_pending($product))) {
             $fields[] = 'short_description';
         }
+        if ($has_style && ('replace' === $mode || 'pending' === $product->get_meta(HSY_STYLE_META))) {
+            if (!HSY_CATEGORIES::style_options($product)) {
+                return array_merge($base, ['action' => 'error', 'message' => 'El producto no tiene subcategorías de estilo para elegir (revisa sus categorías).']);
+            }
+            $fields[] = 'style';
+        }
         if (!$fields) {
-            $why = !$has_description && !$has_short ? 'Sin textos en la fila.' : 'Ya tiene ese contenido (modo «solo faltantes»).';
+            $why = !$has_description && !$has_short && !$has_style ? 'Sin textos en la fila.' : 'Ya tiene ese contenido (modo «solo faltantes»).';
             return array_merge($base, ['action' => 'skip', 'message' => $why]);
         }
         return array_merge($base, [
@@ -227,6 +241,7 @@ class HSY_CSV
                 'caracteristicas' => (string) ($row['caracteristicas'] ?? ''),
                 'descripcion_html' => (string) ($row['descripcion_html'] ?? ''),
                 'descripcion_corta' => (string) ($row['descripcion_corta'] ?? ''),
+                'estilo' => (string) ($row['estilo'] ?? ''),
             ],
         ]);
     }
@@ -268,6 +283,28 @@ class HSY_CSV
                 $product->update_meta_data(HSY_SHORT_AUTO_META, 'no');
                 $written[] = 'short_description';
             }
+        }
+        if (in_array('style', $item['fields'], true)
+            && ('replace' === $mode || 'pending' === $product->get_meta(HSY_STYLE_META))) {
+            // Estilo: nombres de subcategoría separados por coma («Análogo, Elegante»), entre las opciones del producto.
+            if ('replace' === $mode) {
+                // Quitar los estilos anteriores (hijos de las categorías más profundas) antes de poner los nuevos.
+                $options = HSY_CATEGORIES::style_options($product);
+                $current = array_map('intval', $product->get_category_ids());
+                $style_ids = [];
+                foreach ($options as $ids) {
+                    $style_ids = array_merge($style_ids, $ids);
+                }
+                $product->set_category_ids(array_values(array_diff($current, $style_ids)));
+            }
+            $names = array_filter(array_map('trim', preg_split('/[,;\/|]+/u', $texts['estilo'])), 'strlen');
+            $applied = HSY_CATEGORIES::apply_styles($product, array_slice($names, 0, 3));
+            if (!$applied) {
+                return new WP_Error('hsy_csv_style', 'Ningún estilo de «' . $texts['estilo'] . '» está entre las opciones del producto.');
+            }
+            $product->update_meta_data(HSY_STYLE_META, 'done');
+            $product->update_meta_data('_hsy_style_names', implode(', ', $applied));
+            $written[] = 'style';
         }
         if (!$written) {
             return new WP_Error('hsy_csv_empty', 'Los textos quedaron vacíos al limpiarlos.');

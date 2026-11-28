@@ -199,7 +199,8 @@ class HSY_CATEGORIES
     }
 
     /**
-     * Nombres de categorías de varios productos en una consulta: [product_id => [nombres…]] (sin la de por defecto).
+     * Categorías de varios productos en una consulta: [product_id => ['names' => [todas], 'has' => bool]].
+     * «has» = tiene alguna además de la categoría por defecto (misma regla que has_categories()).
      */
     public static function names_for($product_ids)
     {
@@ -212,8 +213,14 @@ class HSY_CATEGORIES
         $out = [];
         if (!is_wp_error($terms)) {
             foreach ($terms as $term) {
+                $id = (int) $term->object_id;
+                if (!isset($out[$id])) {
+                    $out[$id] = ['names' => [], 'has' => false];
+                }
+                // Se muestran todas (también la de por defecto, que puede ser «Relojes»); «has» = alguna además de esa.
+                $out[$id]['names'][] = $term->name;
                 if ((int) $term->term_id !== $default) {
-                    $out[(int) $term->object_id][] = $term->name;
+                    $out[$id]['has'] = true;
                 }
             }
         }

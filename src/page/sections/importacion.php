@@ -36,7 +36,7 @@
                 <li><strong>Marca</strong> → marca del producto (<code>product_brand</code>): la marca equivalente de la tienda (ver «Marcas del catálogo»); si no hay, se crea en formato normal: «ARMANI EXCHANGE» → «Armani Exchange».</li>
                 <li><strong>Nombre</strong> → nombre del producto según la plantilla (nombre, género, marca y referencia). <strong>Referencia</strong> → SKU.</li>
                 <li><strong>Características</strong> (Género, Correa, Caja, Tamaño, Resistencia al agua, Referencia) → atributos visibles. También como descripción corta provisional, hasta que se genere la definitiva (ver <strong>Descripciones</strong>).</li>
-                <li><strong>Precio</strong> → el mayor entre mayorista × 2 y PVP sugerido, con utilidad mínima (ver <strong>Precio y descuentos</strong>). El precio rebajado queda vacío.</li>
+                <li><strong>Precio</strong> → el mayor entre mayorista × 2 y PVP sugerido, con utilidad mínima (ver <strong>Precio y descuentos</strong>). El precio rebajado lo pone el plugin de descuentos.</li>
                 <li><strong>Precio mayorista</strong> → meta <code><?= esc_html(HSY_WHOLESALE_META) ?></code>, se actualiza en cada importación y se ve en el editor del producto, junto a los precios.</li>
                 <li>Todos los productos importados llevan la meta <code><?= esc_html(HSY_IMPORTED_META) ?> = yes</code>.</li>
             </ul>
@@ -180,7 +180,7 @@ $hsy_cat_tree = HSY_CATEGORIES::tree();
                 <li><strong>Precio del producto</strong> = el mayor entre <strong>mayorista × 2</strong> y el <strong>PVP sugerido</strong>.</li>
                 <li><strong>Categoría de descuento</strong> según el margen (tabla de abajo). Otro plugin aplica el descuento de esa categoría; este solo la asigna y quita las de otros tramos. Es independiente de las categorías de género / estilo.</li>
                 <li><strong>Utilidad mínima</strong>: si precio × (1 − descuento general − descuento de su categoría) es menor o igual a mayorista × (1 + utilidad), el precio sube lo justo para quedar por encima (redondeado hacia arriba).</li>
-                <li>Se guardan en el producto: precio mayorista, PVP sugerido, margen aprox., mayorista × 2 (se ven en el editor, debajo del precio). El precio rebajado queda vacío.</li>
+                <li>Se guardan en el producto: precio mayorista, PVP sugerido, margen aprox., mayorista × 2 (se ven en el editor, debajo del precio). El precio rebajado no se toca: lo pone el plugin de descuentos.</li>
             </ol>
             <p class="description">Se aplica al importar y con el botón «Actualizar precios y categorías de descuento» de la pestaña Productos (solo precios, sin IA).</p>
         </td>
@@ -228,6 +228,16 @@ $hsy_cat_tree = HSY_CATEGORIES::tree();
             <p class="description">Cada producto va al tramo de mayor «margen desde» que alcance; con menos margen que el primero, a ninguno. Por defecto: 50 % → Ofertas 5 %, 60 % → Ofertas 10 %, 70 % → Ofertas 15 % (49 % o menos, ninguna). Deja la categoría vacía para quitar un tramo; la última fila sirve para añadir uno.</p>
         </td>
     </tr>
+    <?php if (HSY_PRICING::dpv_active()) : ?>
+    <tr>
+        <th scope="row">Descuentos automáticos</th>
+        <td>
+            <input type="hidden" name="hsy[reactivate_discounts_shown]" value="1">
+            <label><input type="checkbox" name="hsy[reactivate_discounts]" value="1" <?php checked($config['reactivate_discounts'], 1); ?>> Aplicar descuentos automáticos de <strong>Descuentos por Volumen</strong> al importar o actualizar</label>
+            <p class="description">Activado: en cada importación o actualización (también «Actualizar precios y categorías de descuento») el producto queda con el interruptor «Aplicar descuentos automáticos» encendido, y ese plugin calcula su precio rebajado (descuento general + el de la categoría de oferta). Si alguien lo había pasado a manual, se reactiva. Desactivado: no se toca ese interruptor.</p>
+        </td>
+    </tr>
+    <?php endif; ?>
     <tr>
         <th scope="row"><label for="hsy-price-round">Redondeo</label></th>
         <td><input type="number" id="hsy-price-round" name="hsy[price_round]" value="<?= esc_attr($config['price_round']) ?>" min="1" step="1" class="small-text"> — cuando el precio se sube por utilidad mínima, se redondea hacia arriba a este múltiplo.</td>

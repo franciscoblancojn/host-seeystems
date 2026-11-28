@@ -36,6 +36,7 @@ class HSY_USE_DATA_CONFIG extends HSY_USE_DATA_BASE
         'global_discount' => 27,    // descuento que otro plugin aplica a todos, en %
         'discount_combine' => 'sum', // sum: 27 % + 5 % = 32 %  ·  chain: 1 − 0,73 × 0,95
         'price_round' => 100,       // redondeo hacia arriba cuando el precio se ajusta por utilidad mínima
+        'reactivate_discounts' => 1, // al importar o actualizar, aplicar los descuentos automáticos de «Descuentos por Volumen» (quita _dpv_manual)
         // Envío por defecto (en las unidades de la tienda): solo se rellenan los datos vacíos (HSY_HOOK_SHIPPING).
         'default_length' => 20,
         'default_width' => 15,
@@ -180,6 +181,10 @@ class HSY_USE_DATA_CONFIG extends HSY_USE_DATA_BASE
             $out['global_discount'] = min(95, max(0, (float) str_replace(',', '.', (string) ($input['global_discount'] ?? 27))));
             $out['discount_combine'] = 'chain' === ($input['discount_combine'] ?? '') ? 'chain' : 'sum';
             $out['price_round'] = max(1, (int) ($input['price_round'] ?? 100));
+            // Solo se muestra si «Descuentos por Volumen» está activo: si no vino en el formulario, se conserva.
+            if (!empty($input['reactivate_discounts_shown'])) {
+                $out['reactivate_discounts'] = empty($input['reactivate_discounts']) ? 0 : 1;
+            }
             $tiers = [];
             foreach ((array) ($input['discount_tiers'] ?? []) as $t) {
                 $slug = sanitize_title($t['slug'] ?? '');

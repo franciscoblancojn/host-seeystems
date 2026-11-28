@@ -387,7 +387,7 @@ jQuery(function ($) {
             return r.product_id;
         });
         if (!ids.length || !window.confirm('¿Recalcular precio y categoría de descuento de ' + ids.length +
-            ' productos importados? Cambia el precio normal (y quita el rebajado) según la regla de Importación → Precio y descuentos.')) {
+            ' productos importados? Cambia el precio normal según la regla de Importación → Precio y descuentos; el rebajado lo recalcula el plugin de descuentos.')) {
             return;
         }
         var total = ids.length;

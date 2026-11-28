@@ -4,6 +4,14 @@ Todos los cambios importantes del plugin Host Seeystems. Formato basado en [Keep
 
 > ✍️ Antes de publicar, agrega arriba una sección `## [Sin publicar]` con los cambios. `npm run push-v -- patch|minor|major` la renombra a `## [X.Y.Z] - fecha`, y no publica si esa sección no existe.
 
+## [1.9.2] - 2026-11-28
+
+### 🐛 Corregido
+- 💲 El cálculo de precio vaciaba el precio rebajado en cada producto. «Descuentos por Volumen» lo tomaba como una edición manual, lo pasaba a modo manual (interruptor «Aplicar descuentos automáticos» apagado, `_dpv_manual`) y dejaba de aplicar su descuento; la tienda mostraba entonces el de otra regla. Ahora el plugin **nunca toca el precio rebajado**: solo el precio normal, y el plugin de descuentos lo recalcula al guardar.
+
+### ✨ Añadido
+- Ajuste **«Aplicar descuentos automáticos de Descuentos por Volumen al importar o actualizar»** (Importación → Precio y descuentos), activado por defecto y visible solo si ese plugin está activo: en cada importación o actualización (también «Actualizar precios y categorías de descuento», aunque «Precio» no esté marcado) deja encendido su interruptor «Aplicar descuentos automáticos» (quita `_dpv_manual`), para que calcule el precio rebajado. Sirve también para reparar los productos que quedaron en manual.
+
 ## [1.9.1] - 2026-11-28
 
 ### ✨ Añadido

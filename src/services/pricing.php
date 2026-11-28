@@ -21,6 +21,9 @@ class HSY_PRICING
     const X2_META = '_hsy_wholesale_x2';
     const CALC_META = '_hsy_price_calc';
 
+    /** Meta con la que «Descuentos por Volumen» marca un producto como manual (sin descuentos automáticos). */
+    const DPV_MANUAL_META = '_dpv_manual';
+
     /** Tramos por defecto: margen mínimo (incluido) → slug de la categoría y % de descuento que aplica el otro plugin. */
     const DEFAULT_TIERS = [
         ['min' => 50, 'slug' => 'ofertas-5', 'percent' => 5],
@@ -119,8 +122,8 @@ class HSY_PRICING
     }
 
     /**
-     * Aplica el cálculo al producto (sin guardar): metas siempre; precio normal (sin rebajado) y categoría de
-     * descuento solo con $set_price.
+     * Aplica el cálculo al producto (sin guardar): metas y descuentos automáticos siempre; precio normal y
+     * categoría de descuento solo con $set_price. Nunca toca el precio rebajado (es del plugin de descuentos).
      * Devuelve el cálculo o null.
      */
     public static function apply($product, $wholesale, $pvp, $config, $set_price = true)
@@ -129,6 +132,7 @@ class HSY_PRICING
         $product->update_meta_data('_hsy_pvp', $pvp > 0 ? (string) $pvp : '');
         $calc = self::calc($wholesale, $pvp, $config);
         if (!$calc) {
+            self::reactivate_discounts($product, $config);
             return null;
         }
         $old = $product->get_meta(self::CALC_META);
@@ -147,11 +151,31 @@ class HSY_PRICING
             'at' => time(),
         ]);
         if ($set_price) {
+            // Solo el precio normal. El precio rebajado NO se toca: lo calcula el plugin de descuentos al guardar
+            // (si se vaciara aquí, «Descuentos por Volumen» lo tomaría como una edición manual y dejaría de aplicarlo).
             $product->set_regular_price((string) $calc['price']);
-            $product->set_sale_price(''); // los descuentos los aplica el otro plugin por categoría
             self::set_tier_category($product, $calc['tier'], $config);
         }
+        self::reactivate_discounts($product, $config);
         return $calc;
+    }
+
+    /** ¿Está activo el plugin «Descuentos por Volumen»? */
+    public static function dpv_active()
+    {
+        return class_exists('DPV_RULES');
+    }
+
+    /**
+     * Con el ajuste reactivate_discounts (y «Descuentos por Volumen» activo), quita el modo manual del producto
+     * para que ese plugin le aplique sus descuentos automáticos al guardar. Se llama en toda importación o
+     * actualización (vía apply()).
+     */
+    public static function reactivate_discounts($product, $config)
+    {
+        if (!empty($config['reactivate_discounts']) && self::dpv_active()) {
+            $product->delete_meta_data(self::DPV_MANUAL_META);
+        }
     }
 
     /**

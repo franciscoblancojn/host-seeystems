@@ -4,6 +4,11 @@ Todos los cambios importantes del plugin Host Seeystems. Formato basado en [Keep
 
 > ✍️ Antes de publicar, agrega arriba una sección `## [Sin publicar]` con los cambios. `npm run push-v -- patch|minor|major` la renombra a `## [X.Y.Z] - fecha`, y no publica si esa sección no existe.
 
+## [1.9.1] - 2026-11-28
+
+### ✨ Añadido
+- 📦 **Dimensiones y peso por defecto** (Importación → «Dimensiones y peso por defecto»): 20 × 15 × 15 y 1, en las unidades de la tienda. Cada vez que se guarda un producto importado (importar, actualizar, recalcular precios, generar descripciones, importar CSV o editar a mano) se rellenan **solo los datos vacíos**: si tiene ancho pero no alto, solo se pone el alto. Un ajuste vacío no rellena ese dato. Los productos no importados no se tocan.
+
 ## [1.9.0] - 2026-11-28
 
 ### ✨ Añadido

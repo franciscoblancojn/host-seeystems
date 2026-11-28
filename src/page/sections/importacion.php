@@ -234,6 +234,25 @@ $hsy_cat_tree = HSY_CATEGORIES::tree();
     </tr>
 </table>
 
+<h2>Dimensiones y peso por defecto</h2>
+<?php $hsy_dim = get_option('woocommerce_dimension_unit', 'cm'); $hsy_wu = get_option('woocommerce_weight_unit', 'kg'); ?>
+<table class="form-table" role="presentation">
+    <tr>
+        <th scope="row">Envío</th>
+        <td>
+            <label>Largo <input type="number" name="hsy[default_length]" value="<?= esc_attr($config['default_length']) ?>" min="0" step="0.01" class="small-text"></label> ×
+            <label>ancho <input type="number" name="hsy[default_width]" value="<?= esc_attr($config['default_width']) ?>" min="0" step="0.01" class="small-text"></label> ×
+            <label>alto <input type="number" name="hsy[default_height]" value="<?= esc_attr($config['default_height']) ?>" min="0" step="0.01" class="small-text"></label> <?= esc_html($hsy_dim) ?>
+            &nbsp;·&nbsp; <label>peso <input type="number" name="hsy[default_weight]" value="<?= esc_attr($config['default_weight']) ?>" min="0" step="0.01" class="small-text"></label> <?= esc_html($hsy_wu) ?>
+            <ul class="hsy-help">
+                <li>Cada vez que se guarda un producto importado (al importar, actualizar, recalcular precios, generar descripciones, importar el CSV o editarlo a mano) se rellenan <strong>solo los datos vacíos</strong>. Ejemplo: si tiene ancho pero no alto, solo se pone el alto.</li>
+                <li>En las unidades de la tienda (WooCommerce → Ajustes → Productos: <?= esc_html($hsy_dim) ?> y <?= esc_html($hsy_wu) ?>). Deja un campo vacío para no rellenar ese dato.</li>
+                <li>Para completarlo en los productos ya importados sin tocar nada más, usa «Actualizar precios y categorías de descuento» (también los guarda).</li>
+            </ul>
+        </td>
+    </tr>
+</table>
+
 <h2>Stock mínimo</h2>
 <table class="form-table" role="presentation">
     <tr>

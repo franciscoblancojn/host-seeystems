@@ -36,6 +36,11 @@ class HSY_USE_DATA_CONFIG extends HSY_USE_DATA_BASE
         'global_discount' => 27,    // descuento que otro plugin aplica a todos, en %
         'discount_combine' => 'sum', // sum: 27 % + 5 % = 32 %  ·  chain: 1 − 0,73 × 0,95
         'price_round' => 100,       // redondeo hacia arriba cuando el precio se ajusta por utilidad mínima
+        // Envío por defecto (en las unidades de la tienda): solo se rellenan los datos vacíos (HSY_HOOK_SHIPPING).
+        'default_length' => 20,
+        'default_width' => 15,
+        'default_height' => 15,
+        'default_weight' => 1,
         'discount_tiers' => [],     // [['min' => 50, 'slug' => 'ofertas-5', 'percent' => 5], …]; vacío = HSY_PRICING::DEFAULT_TIERS
         // Descripciones pendientes (HSY_CONTENT): IA del plugin IA Conector y/o Google (Serper.dev).
         'ai_enabled' => 0,
@@ -188,6 +193,10 @@ class HSY_USE_DATA_CONFIG extends HSY_USE_DATA_BASE
                 ];
             }
             $out['discount_tiers'] = $tiers;
+            foreach (['default_length', 'default_width', 'default_height', 'default_weight'] as $key) {
+                $value = str_replace(',', '.', trim((string) ($input[$key] ?? '')));
+                $out[$key] = '' === $value ? '' : max(0, (float) $value); // vacío = no rellenar ese dato
+            }
             $out['describe'] = empty($input['describe']) ? 0 : 1;
             $out['ai_enabled'] = empty($input['ai_enabled']) ? 0 : 1;
             // Orden del formulario = prioridad. Solo las marcadas.

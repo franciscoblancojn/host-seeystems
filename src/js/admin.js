@@ -51,7 +51,7 @@ jQuery(function ($) {
 
     function hsy_busy(value) {
         busy = value;
-        $page.find('#hsy-load, #hsy-import-selected, #hsy-import-all, .hsy-import-one, .hsy-regenerate-one, #hsy-regenerate-selected, #hsy-content-pending, #hsy-publish, #hsy-publish-filtered').prop('disabled', value);
+        $page.find('#hsy-load, #hsy-import-selected, #hsy-import-all, .hsy-import-one, .hsy-regenerate-one, #hsy-regenerate-selected, #hsy-content-pending, #hsy-publish, #hsy-publish-filtered, #hsy-prices-filtered').prop('disabled', value);
         $('#hsy-spinner').toggleClass('is-active', value);
         if (!value) {
             hsy_update_count();
@@ -143,6 +143,7 @@ jQuery(function ($) {
             '<td class="hsy-nowrap">' + hsy_text(row.sku) + '</td>' +
             '<td class="hsy-nowrap">' + hsy_price(row.pvp) + '</td>' +
             '<td class="hsy-nowrap">' + hsy_price(row.wholesale) + '</td>' +
+            '<td class="hsy-nowrap">' + (row.product_id ? hsy_price(row.store_price) : '<span class="hsy-muted">—</span>') + '</td>' +
             '<td>' + hsy_stock(row.stock) +
             (row.availability ? '<br><span class="hsy-muted">' + hsy_text(row.availability) + '</span>' : '') + '</td>' +
             '<td class="hsy-col-text">' + hsy_text_cell(row, row.description, row.description_pending) + '</td>' +
@@ -232,12 +233,17 @@ jQuery(function ($) {
         for (var i = 0; i < info.list.length; i++) {
             html.push(hsy_row_html(info.list[i]));
         }
-        $('#hsy-rows').html(html.length ? html.join('') : '<tr><td colspan="11">No hay productos.</td></tr>');
+        $('#hsy-rows').html(html.length ? html.join('') : '<tr><td colspan="12">No hay productos.</td></tr>');
         // Marcar las filas seleccionadas (la selección se conserva entre páginas).
         $('#hsy-rows .hsy-check').each(function () {
             this.checked = !!selected[this.value];
         });
         $('#hsy-total').text(info.all.length);
+        var importedCount = $.grep(info.all, function (r) {
+            return !!r.product_id;
+        }).length;
+        $('#hsy-prices-count').text(importedCount);
+        $('#hsy-prices-filtered').prop('disabled', busy || !importedCount);
         var publishable = $.grep(info.all, hsy_publishable).length;
         $('#hsy-publish-filtered-count').text(publishable);
         $('#hsy-publish-filtered').prop('disabled', busy || !publishable);
@@ -368,6 +374,60 @@ jQuery(function ($) {
     $page.on('change', '#hsy-filter, #hsy-brand', function () {
         currentPage = 1;
         hsy_render();
+    });
+
+    // Recalcular precio y categoría de descuento de los importados del filtro actual (sin IA).
+    $page.on('click', '#hsy-prices-filtered', function () {
+        if (busy) {
+            return;
+        }
+        var ids = $.map($.grep(hsy_visible(), function (r) {
+            return !!r.product_id;
+        }), function (r) {
+            return r.product_id;
+        });
+        if (!ids.length || !window.confirm('¿Recalcular precio y categoría de descuento de ' + ids.length +
+            ' productos importados? Cambia el precio normal (y quita el rebajado) según la regla de Importación → Precio y descuentos.')) {
+            return;
+        }
+        var total = ids.length;
+        var count = 0;
+        var stats = { ok: 0, adjusted: 0, tiers: 0, errors: 0, last: '' };
+        hsy_busy(true);
+        $('#hsy-progress-ai').prop('hidden', true);
+        hsy_progress(0, total, '#hsy-progress', 'Precios');
+        function next() {
+            if (!ids.length) {
+                hsy_busy(false);
+                hsy_message('#hsy-message', 'Precios actualizados: ' + stats.ok + ' (' + stats.tiers + ' con categoría de descuento, ' +
+                    stats.adjusted + ' ajustados por utilidad mínima)' + (stats.errors ? ', ' + stats.errors + ' con error (' + stats.last + ').' : '.'),
+                    stats.errors ? 'error' : 'ok');
+                hsy_refresh_pending();
+                return;
+            }
+            var batch = ids.splice(0, 25);
+            hsy_post('prices', { ids: batch }).then(function (results) {
+                for (var i = 0; i < results.length; i++) {
+                    hsy_apply_content(results[i]);
+                    if (results[i].ok) {
+                        stats.ok++;
+                        stats.tiers += results[i].tier ? 1 : 0;
+                        stats.adjusted += results[i].adjusted ? 1 : 0;
+                    } else {
+                        stats.errors++;
+                        stats.last = results[i].message;
+                    }
+                }
+            }, function (error) {
+                stats.errors += batch.length;
+                stats.last = error;
+            }).always(function () {
+                count += batch.length;
+                hsy_progress(count, total, '#hsy-progress', 'Precios');
+                next();
+            });
+        }
+        next();
     });
 
     // Publicar todos los del filtro actual (todas las páginas) en borrador y con contenido completo.

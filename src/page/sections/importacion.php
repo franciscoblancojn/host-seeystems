@@ -36,7 +36,7 @@
                 <li><strong>Marca</strong> → marca del producto (<code>product_brand</code>): la marca equivalente de la tienda (ver «Marcas del catálogo»); si no hay, se crea en formato normal: «ARMANI EXCHANGE» → «Armani Exchange».</li>
                 <li><strong>Nombre</strong> → nombre del producto según la plantilla (nombre, género, marca y referencia). <strong>Referencia</strong> → SKU.</li>
                 <li><strong>Características</strong> (Género, Correa, Caja, Tamaño, Resistencia al agua, Referencia) → atributos visibles. También como descripción corta provisional, hasta que se genere la definitiva (ver <strong>Descripciones</strong>).</li>
-                <li><strong>PVP sugerido</strong> → precio normal. El precio rebajado no se toca.</li>
+                <li><strong>Precio</strong> → el mayor entre mayorista × 2 y PVP sugerido, con utilidad mínima (ver <strong>Precio y descuentos</strong>). El precio rebajado queda vacío.</li>
                 <li><strong>Precio mayorista</strong> → meta <code><?= esc_html(HSY_WHOLESALE_META) ?></code>, se actualiza en cada importación y se ve en el editor del producto, junto a los precios.</li>
                 <li>Todos los productos importados llevan la meta <code><?= esc_html(HSY_IMPORTED_META) ?> = yes</code>.</li>
             </ul>
@@ -159,6 +159,78 @@ foreach ((new HSY_USE_DATA_CATALOG())->items() as $hsy_it) {
             <input type="text" id="hsy-category" name="hsy[category]" value="<?= esc_attr($config['category']) ?>" class="regular-text">
             <p class="description">Opcional: categoría para los productos cuyo género no tiene ninguna marcada («Padre &gt; Hijo» para una subcategoría; se crea si no existe). Vacío = sin categoría y con aviso.</p>
         </td>
+    </tr>
+</table>
+
+<h2>Precio y descuentos</h2>
+<?php
+$hsy_tiers = HSY_PRICING::tiers($config);
+usort($hsy_tiers, function ($a, $b) {
+    return (float) $a['min'] - (float) $b['min'];
+});
+$hsy_tiers[] = ['min' => '', 'slug' => '', 'percent' => '']; // fila vacía para añadir un tramo
+$hsy_cat_tree = HSY_CATEGORIES::tree();
+?>
+<table class="form-table" role="presentation">
+    <tr>
+        <th scope="row">Cómo se calcula</th>
+        <td>
+            <ol class="hsy-help">
+                <li>Con el <strong>precio mayorista</strong> y el <strong>PVP sugerido</strong> del catálogo: <strong>margen aprox.</strong> = (1 − mayorista ÷ PVP) × 100, redondeado (lo mismo que muestra el catálogo).</li>
+                <li><strong>Precio del producto</strong> = el mayor entre <strong>mayorista × 2</strong> y el <strong>PVP sugerido</strong>.</li>
+                <li><strong>Categoría de descuento</strong> según el margen (tabla de abajo). Otro plugin aplica el descuento de esa categoría; este solo la asigna y quita las de otros tramos. Es independiente de las categorías de género / estilo.</li>
+                <li><strong>Utilidad mínima</strong>: si precio × (1 − descuento general − descuento de su categoría) es menor o igual a mayorista × (1 + utilidad), el precio sube lo justo para quedar por encima (redondeado hacia arriba).</li>
+                <li>Se guardan en el producto: precio mayorista, PVP sugerido, margen aprox., mayorista × 2 (se ven en el editor, debajo del precio). El precio rebajado queda vacío.</li>
+            </ol>
+            <p class="description">Se aplica al importar y con el botón «Actualizar precios y categorías de descuento» de la pestaña Productos (solo precios, sin IA).</p>
+        </td>
+    </tr>
+    <tr>
+        <th scope="row"><label for="hsy-profit-margin">Utilidad mínima</label></th>
+        <td><input type="number" id="hsy-profit-margin" name="hsy[profit_margin]" value="<?= esc_attr($config['profit_margin']) ?>" min="0" step="0.5" class="small-text"> % sobre el precio mayorista</td>
+    </tr>
+    <tr>
+        <th scope="row"><label for="hsy-global-discount">Descuento general</label></th>
+        <td>
+            <input type="number" id="hsy-global-discount" name="hsy[global_discount]" value="<?= esc_attr($config['global_discount']) ?>" min="0" max="95" step="0.5" class="small-text"> %
+            <select name="hsy[discount_combine]">
+                <option value="sum" <?php selected($config['discount_combine'], 'sum'); ?>>se suma al de la categoría (27 % + 5 % = 32 %)</option>
+                <option value="chain" <?php selected($config['discount_combine'], 'chain'); ?>>se encadena con el de la categoría (1 − 0,73 × 0,95)</option>
+            </select>
+            <p class="description">El que otro plugin aplica a todos los productos. Solo se usa para comprobar la utilidad mínima.</p>
+        </td>
+    </tr>
+    <tr>
+        <th scope="row">Categorías de descuento por margen</th>
+        <td>
+            <table class="widefat striped hsy-tiers">
+                <thead><tr><th>Margen desde (%)</th><th>Categoría</th><th>Descuento que aplica (%)</th></tr></thead>
+                <tbody>
+                    <?php foreach ($hsy_tiers as $hsy_i => $hsy_t) : ?>
+                        <tr>
+                            <td><input type="number" name="hsy[discount_tiers][<?= (int) $hsy_i ?>][min]" value="<?= esc_attr($hsy_t['min']) ?>" min="0" max="100" step="1" class="small-text"></td>
+                            <td>
+                                <select name="hsy[discount_tiers][<?= (int) $hsy_i ?>][slug]">
+                                    <option value="">— Sin tramo —</option>
+                                    <?php foreach ($hsy_cat_tree as $hsy_node) : $hsy_ct = $hsy_node['term']; ?>
+                                        <option value="<?= esc_attr($hsy_ct->slug) ?>" <?php selected($hsy_t['slug'], $hsy_ct->slug); ?>><?= esc_html(str_repeat('— ', $hsy_node['depth']) . $hsy_ct->name . ' (' . $hsy_ct->slug . ')') ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <?php if ('' !== $hsy_t['slug'] && !get_term_by('slug', $hsy_t['slug'], 'product_cat')) : ?>
+                                    <span class="hsy-error">No existe la categoría «<?= esc_html($hsy_t['slug']) ?>».</span>
+                                <?php endif; ?>
+                            </td>
+                            <td><input type="number" name="hsy[discount_tiers][<?= (int) $hsy_i ?>][percent]" value="<?= esc_attr($hsy_t['percent']) ?>" min="0" max="95" step="0.5" class="small-text"></td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+            <p class="description">Cada producto va al tramo de mayor «margen desde» que alcance; con menos margen que el primero, a ninguno. Por defecto: 50 % → Ofertas 5 %, 60 % → Ofertas 10 %, 70 % → Ofertas 15 % (49 % o menos, ninguna). Deja la categoría vacía para quitar un tramo; la última fila sirve para añadir uno.</p>
+        </td>
+    </tr>
+    <tr>
+        <th scope="row"><label for="hsy-price-round">Redondeo</label></th>
+        <td><input type="number" id="hsy-price-round" name="hsy[price_round]" value="<?= esc_attr($config['price_round']) ?>" min="1" step="1" class="small-text"> — cuando el precio se sube por utilidad mínima, se redondea hacia arriba a este múltiplo.</td>
     </tr>
 </table>
 

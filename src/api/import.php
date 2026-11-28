@@ -21,6 +21,7 @@ class HSY_API_IMPORT
         add_action('wp_ajax_hsy_reset_prompts', [self::class, 'reset_prompts']);
         add_action('wp_ajax_hsy_publishable', [self::class, 'publishable']);
         add_action('wp_ajax_hsy_publish', [self::class, 'publish']);
+        add_action('wp_ajax_hsy_prices', [self::class, 'prices']);
     }
 
     private static function guard()
@@ -115,6 +116,29 @@ class HSY_API_IMPORT
         $data->set($config);
         HSY_LOG_SERVICE::add('prompts_restablecidos', []);
         wp_send_json_success('Prompts restablecidos a los de por defecto.');
+    }
+
+    /** Recalcula precio, metas y categoría de descuento de un lote de productos (máx. 25). Sin IA. */
+    public static function prices()
+    {
+        self::guard();
+        $ids = array_slice(array_filter(array_map('absint', (array) wp_unslash($_POST['ids'] ?? []))), 0, 25);
+        if (!$ids) {
+            wp_send_json_error('No hay productos.');
+        }
+        $config = (new HSY_USE_DATA_CONFIG())->get();
+        $results = [];
+        foreach ($ids as $id) {
+            $calc = HSY_PRICING::update_product($id, $config);
+            $results[] = is_wp_error($calc)
+                ? ['product_id' => $id, 'ok' => false, 'message' => $calc->get_error_message()]
+                : ['product_id' => $id, 'ok' => true, 'price' => $calc['price'], 'tier' => $calc['tier'] ? $calc['tier']['slug'] : '', 'adjusted' => $calc['adjusted']];
+        }
+        $texts = HSY_CONTENT::texts($ids);
+        foreach ($results as $i => $r) {
+            $results[$i]['row'] = $texts[$r['product_id']] ?? null;
+        }
+        wp_send_json_success($results);
     }
 
     /** Quita la pausa por límite de uso de una conexión de IA. */

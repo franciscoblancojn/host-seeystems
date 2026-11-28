@@ -103,10 +103,9 @@ class HSY_IMPORTER
             }
             $product->set_name($new_name);
         }
-        if ($has('price') && null !== $item['pvp']) {
-            // PVP sugerido = precio normal. El precio rebajado lo define la tienda: no se toca.
-            $product->set_regular_price((string) round($item['pvp'], wc_get_price_decimals()));
-        }
+        // Precio (mayor entre mayorista × 2 y PVP, con utilidad mínima) y categoría de descuento por margen;
+        // las metas de precio se actualizan siempre (HSY_PRICING).
+        HSY_PRICING::apply($product, (float) $item['wholesale'], (float) $item['pvp'], $config, $has('price'));
         if ($has('stock') && null !== $item['stock']) {
             $product->set_manage_stock(true);
             $product->set_stock_quantity(HSY_STOCK::apply($item['stock'], $config['min_stock']));
@@ -128,8 +127,6 @@ class HSY_IMPORTER
         $product->update_meta_data(HSY_IMPORTED_META, 'yes');
         $product->update_meta_data(HSY_SOURCE_META, $item['id']);
         $product->update_meta_data('_hsy_source_name', $item['name']);
-        $product->update_meta_data(HSY_WHOLESALE_META, null !== $item['wholesale'] ? (string) $item['wholesale'] : '');
-        $product->update_meta_data('_hsy_pvp', null !== $item['pvp'] ? (string) $item['pvp'] : '');
         $product->update_meta_data('_hsy_availability', $item['availability']);
         $product->update_meta_data('_hsy_stock_source', null !== $item['stock'] ? $item['stock'] : '');
         // Estilo (subcategorías): queda pendiente para la IA si hay opciones y no se clasificó antes.

@@ -82,6 +82,8 @@ $catalog = new HSY_USE_DATA_CATALOG();
         <select id="hsy-brand">
             <option value="">Todas las marcas</option>
         </select>
+        <button type="button" class="button" id="hsy-prices-filtered" disabled
+            title="Recalcula precio (el mayor entre mayorista × 2 y PVP, con utilidad mínima), metas y categoría de descuento de los productos importados del filtro actual. No usa IA ni toca descripciones.">Actualizar precios y categorías de descuento (<span id="hsy-prices-count">0</span>)</button>
         <button type="button" class="button button-primary" id="hsy-publish-filtered" disabled
             title="Publica todos los productos del filtro actual (todas las páginas) que están en borrador y tienen contenido completo">Publicar filtrados con contenido (<span id="hsy-publish-filtered-count">0</span>)</button>
         <label class="hsy-auto-content" title="Activada: al importar, la IA genera descripciones, estilo y lo que falte en paralelo. Desactivada: solo importa y los productos quedan «Pendiente de generar con IA».">
@@ -115,6 +117,7 @@ $catalog = new HSY_USE_DATA_CATALOG();
                 <th>Referencia</th>
                 <th>PVP sugerido</th>
                 <th>Precio mayorista</th>
+                <th>Precio tienda</th>
                 <th>Inventario</th>
                 <th class="hsy-col-text">Descripción</th>
                 <th class="hsy-col-text">Descripción corta</th>

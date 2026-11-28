@@ -31,6 +31,12 @@ class HSY_USE_DATA_CONFIG extends HSY_USE_DATA_BASE
         'type_jewelry' => '',      // {tipo} de las joyas ('' = el nombre del catálogo ya es el tipo: «Aretes»)
         // Stock mínimo: con min_stock unidades o menos el producto importado queda con stock 0.
         'min_stock' => 3,
+        // Precio y categorías de descuento (HSY_PRICING).
+        'profit_margin' => 20,      // utilidad mínima sobre el mayorista, en % (precio con descuentos > mayorista × 1,20)
+        'global_discount' => 27,    // descuento que otro plugin aplica a todos, en %
+        'discount_combine' => 'sum', // sum: 27 % + 5 % = 32 %  ·  chain: 1 − 0,73 × 0,95
+        'price_round' => 100,       // redondeo hacia arriba cuando el precio se ajusta por utilidad mínima
+        'discount_tiers' => [],     // [['min' => 50, 'slug' => 'ofertas-5', 'percent' => 5], …]; vacío = HSY_PRICING::DEFAULT_TIERS
         // Descripciones pendientes (HSY_CONTENT): IA del plugin IA Conector y/o Google (Serper.dev).
         'ai_enabled' => 0,
         'ai_connections' => [],    // keys de conexiones de IA Conector, en orden de prioridad (la 1.ª que responda)
@@ -47,7 +53,7 @@ class HSY_USE_DATA_CONFIG extends HSY_USE_DATA_BASE
 
     const UPDATE_FIELDS = [
         'name' => 'Nombre',
-        'price' => 'Precio (PVP)',
+        'price' => 'Precio y categoría de descuento',
         'stock' => 'Inventario',
         'attributes' => 'Características y marca',
         'images' => 'Imágenes',
@@ -165,6 +171,23 @@ class HSY_USE_DATA_CONFIG extends HSY_USE_DATA_BASE
             $out['type_watch'] = sanitize_text_field($input['type_watch'] ?? self::DEFAULTS['type_watch']);
             $out['type_jewelry'] = sanitize_text_field($input['type_jewelry'] ?? self::DEFAULTS['type_jewelry']);
             $out['min_stock'] = max(0, (int) ($input['min_stock'] ?? self::DEFAULTS['min_stock']));
+            $out['profit_margin'] = max(0, (float) str_replace(',', '.', (string) ($input['profit_margin'] ?? 20)));
+            $out['global_discount'] = min(95, max(0, (float) str_replace(',', '.', (string) ($input['global_discount'] ?? 27))));
+            $out['discount_combine'] = 'chain' === ($input['discount_combine'] ?? '') ? 'chain' : 'sum';
+            $out['price_round'] = max(1, (int) ($input['price_round'] ?? 100));
+            $tiers = [];
+            foreach ((array) ($input['discount_tiers'] ?? []) as $t) {
+                $slug = sanitize_title($t['slug'] ?? '');
+                if ('' === $slug || !isset($t['min']) || '' === (string) $t['min']) {
+                    continue;
+                }
+                $tiers[] = [
+                    'min' => max(0, (float) str_replace(',', '.', (string) $t['min'])),
+                    'slug' => $slug,
+                    'percent' => max(0, (float) str_replace(',', '.', (string) ($t['percent'] ?? 0))),
+                ];
+            }
+            $out['discount_tiers'] = $tiers;
             $out['describe'] = empty($input['describe']) ? 0 : 1;
             $out['ai_enabled'] = empty($input['ai_enabled']) ? 0 : 1;
             // Orden del formulario = prioridad. Solo las marcadas.

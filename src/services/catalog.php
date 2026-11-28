@@ -73,6 +73,7 @@ class HSY_CATALOG_SERVICE
                 'categories' => $texts[$product_id]['categories'] ?? [],
                 'has_categories' => $texts[$product_id]['has_categories'] ?? false,
                 'status' => $texts[$product_id]['status'] ?? '',
+                'store_price' => $texts[$product_id]['store_price'] ?? null,
                 'style_pending' => $texts[$product_id]['style_pending'] ?? false,
             ];
         }

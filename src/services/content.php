@@ -141,10 +141,12 @@ class HSY_CONTENT
         }
         $in = implode(',', $product_ids);
         $rows = $wpdb->get_results($wpdb->prepare(
-            "SELECT p.ID, p.post_status, p.post_content, p.post_excerpt, sa.meta_value AS short_auto, st.meta_value AS style
+            "SELECT p.ID, p.post_status, p.post_content, p.post_excerpt, sa.meta_value AS short_auto, st.meta_value AS style,
+                    rp.meta_value AS regular_price
              FROM {$wpdb->posts} p
              LEFT JOIN {$wpdb->postmeta} sa ON sa.post_id = p.ID AND sa.meta_key = %s
              LEFT JOIN {$wpdb->postmeta} st ON st.post_id = p.ID AND st.meta_key = %s
+             LEFT JOIN {$wpdb->postmeta} rp ON rp.post_id = p.ID AND rp.meta_key = '_regular_price'
              WHERE p.ID IN ($in)", // $in son enteros (intval)
             HSY_SHORT_AUTO_META,
             HSY_STYLE_META
@@ -156,6 +158,7 @@ class HSY_CONTENT
             $description = self::text($row->post_content);
             $out[(int) $row->ID] = [
                 'status' => $row->post_status,
+                'store_price' => '' === (string) $row->regular_price ? null : (float) $row->regular_price,
                 'description' => mb_substr($description, 0, self::TEXT_MAX),
                 'short_description' => mb_substr(self::text($row->post_excerpt), 0, self::TEXT_MAX),
                 'description_pending' => '' === $description,
@@ -182,6 +185,7 @@ class HSY_CONTENT
         global $wpdb;
         // El estilo solo cuenta como pendiente si la IA lo clasifica (ajuste ai_style).
         $style = !empty((new HSY_USE_DATA_CONFIG())->get()['ai_style']) ? 'pending' : '__off__';
+        $ignored = HSY_CATEGORIES::ignored_sql(); // enteros: categoría por defecto y de ofertas
         // Qué le falta a cada producto (1/0) y orden: primero los que tienen menos faltantes de las tres
         // (descripción, corta, categorías; los que solo esperan el estilo tienen 0) y, a igualdad, por ID.
         return array_map('intval', $wpdb->get_col($wpdb->prepare(
@@ -193,7 +197,7 @@ class HSY_CONTENT
                     IF(NOT EXISTS (
                         SELECT 1 FROM {$wpdb->term_relationships} tr
                         INNER JOIN {$wpdb->term_taxonomy} tt ON tt.term_taxonomy_id = tr.term_taxonomy_id
-                        WHERE tr.object_id = p.ID AND tt.taxonomy = 'product_cat' AND tt.term_id <> %d), 1, 0) AS no_categories,
+                        WHERE tr.object_id = p.ID AND tt.taxonomy = 'product_cat' AND tt.term_id NOT IN ({$ignored})), 1, 0) AS no_categories,
                     IF(st.meta_value = %s, 1, 0) AS no_style
                 FROM {$wpdb->posts} p
                 INNER JOIN {$wpdb->postmeta} imp ON imp.post_id = p.ID AND imp.meta_key = %s AND imp.meta_value = 'yes'
@@ -204,7 +208,6 @@ class HSY_CONTENT
              WHERE x.no_description + x.no_short + x.no_categories + x.no_style > 0
              ORDER BY (x.no_description + x.no_short + x.no_categories) ASC, x.ID ASC
              LIMIT %d",
-            (int) get_option('default_product_cat', 0),
             $style,
             HSY_IMPORTED_META,
             HSY_SHORT_AUTO_META,

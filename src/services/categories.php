@@ -156,13 +156,35 @@ class HSY_CATEGORIES
      */
     public static function has_categories($product)
     {
-        $default = (int) get_option('default_product_cat', 0);
+        $ignored = self::ignored_ids();
         foreach ($product->get_category_ids() as $id) {
-            if ((int) $id !== $default) {
+            if (!in_array((int) $id, $ignored, true)) {
                 return true;
             }
         }
         return false;
+    }
+
+    /**
+     * Categorías que no cuentan como «tiene categorías»: la de por defecto de WooCommerce y las de ofertas
+     * (Ofertas, Ofertas 5 %…; las de descuento las pone HSY_PRICING y no sustituyen a Relojes / Mujer…).
+     */
+    public static function ignored_ids()
+    {
+        $ids = [(int) get_option('default_product_cat', 0)];
+        foreach (self::terms() as $term) {
+            if (self::is_offer($term)) {
+                $ids[] = (int) $term->term_id;
+            }
+        }
+        return array_values(array_unique(array_filter($ids)));
+    }
+
+    /** ignored_ids() como lista SQL de enteros («1,2,3»; «0» si no hay). */
+    public static function ignored_sql()
+    {
+        $ids = self::ignored_ids();
+        return $ids ? implode(',', array_map('intval', $ids)) : '0';
     }
 
     /**
@@ -200,7 +222,7 @@ class HSY_CATEGORIES
 
     /**
      * Categorías de varios productos en una consulta: [product_id => ['names' => [todas], 'has' => bool]].
-     * «has» = tiene alguna además de la categoría por defecto (misma regla que has_categories()).
+     * «has» = tiene alguna además de la de por defecto y las de ofertas (misma regla que has_categories()).
      */
     public static function names_for($product_ids)
     {
@@ -208,7 +230,7 @@ class HSY_CATEGORIES
         if (!$product_ids) {
             return [];
         }
-        $default = (int) get_option('default_product_cat', 0);
+        $ignored = self::ignored_ids();
         $terms = wp_get_object_terms($product_ids, self::TAXONOMY, ['fields' => 'all_with_object_id', 'orderby' => 'parent']);
         $out = [];
         if (!is_wp_error($terms)) {
@@ -219,7 +241,7 @@ class HSY_CATEGORIES
                 }
                 // Se muestran todas (también la de por defecto, que puede ser «Relojes»); «has» = alguna además de esa.
                 $out[$id]['names'][] = $term->name;
-                if ((int) $term->term_id !== $default) {
+                if (!in_array((int) $term->term_id, $ignored, true)) {
                     $out[$id]['has'] = true;
                 }
             }

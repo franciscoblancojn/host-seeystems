@@ -4,6 +4,19 @@ Todos los cambios importantes del plugin Host Seeystems. Formato basado en [Keep
 
 > ✍️ Antes de publicar, agrega arriba una sección `## [Sin publicar]` con los cambios. `npm run push-v -- patch|minor|major` la renombra a `## [X.Y.Z] - fecha`, y no publica si esa sección no existe.
 
+## [1.9.0] - 2026-11-28
+
+### ✨ Añadido
+- 💲 **Nuevo cálculo de precio** (Importación → «Precio y descuentos»): precio = el mayor entre **precio mayorista × 2** y el **PVP sugerido**. Si el precio con descuentos (descuento general, 27 % por defecto, + el de su categoría) queda en o por debajo de mayorista + **utilidad mínima** (20 % por defecto), el precio sube lo justo (redondeado hacia arriba a 100). El precio rebajado queda vacío.
+- 🏷️ **Categorías de descuento por margen** (margen aprox. sobre PVP = 1 − mayorista ÷ PVP): 50–59 % → Ofertas 5 %, 60–69 % → Ofertas 10 %, 70 % o más → Ofertas 15 %, 49 % o menos → ninguna. Configurables (margen desde, categoría y %). El plugin solo asigna la categoría (y quita la de otros tramos); el descuento lo aplica otro plugin. Es independiente de las categorías de género / estilo.
+- 📝 Metas del producto: precio mayorista, PVP sugerido, **margen aprox.** (`_hsy_margin`), **precio mayorista × 2** (`_hsy_wholesale_x2`) y el detalle del cálculo; en el editor se ven debajo del precio, con la categoría de descuento, el descuento total y el precio con descuentos frente al mínimo.
+- 🔄 Botón **«Actualizar precios y categorías de descuento (N)»** en la pestaña Productos: recalcula solo precio, metas y categoría de descuento de los productos importados del filtro actual (con los precios más recientes del catálogo). No usa IA ni toca descripciones.
+- 📋 Columna «Precio tienda» en la tabla.
+
+### 🔄 Cambiado
+- El precio de los productos ya no es el PVP sugerido sin más: se aplica la regla de arriba al importar (campo «Precio y categoría de descuento»).
+- Las categorías de ofertas (y la categoría por defecto) no cuentan como «tiene categorías»: un producto con solo «Ofertas 10 %» sigue recibiendo sus categorías de género al completar lo faltante.
+
 ## [1.8.0] - 2026-11-27
 
 ### ✨ Añadido

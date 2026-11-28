@@ -18,16 +18,16 @@ class HSY_STATS
     private static function imported()
     {
         global $wpdb;
+        $ignored = HSY_CATEGORIES::ignored_sql(); // enteros: categoría por defecto y de ofertas
         $rows = $wpdb->get_results($wpdb->prepare(
             "SELECT p.ID, p.post_status, TRIM(p.post_content) = '' AS no_description, p.post_excerpt, sa.meta_value AS short_auto,
                     (SELECT COUNT(*) FROM {$wpdb->term_relationships} tr
                      INNER JOIN {$wpdb->term_taxonomy} tt ON tt.term_taxonomy_id = tr.term_taxonomy_id
-                     WHERE tr.object_id = p.ID AND tt.taxonomy = 'product_cat' AND tt.term_id <> %d) AS categories
+                     WHERE tr.object_id = p.ID AND tt.taxonomy = 'product_cat' AND tt.term_id NOT IN ({$ignored})) AS categories
              FROM {$wpdb->posts} p
              INNER JOIN {$wpdb->postmeta} imp ON imp.post_id = p.ID AND imp.meta_key = %s AND imp.meta_value = 'yes'
              LEFT JOIN {$wpdb->postmeta} sa ON sa.post_id = p.ID AND sa.meta_key = %s
              WHERE p.post_type = 'product' AND p.post_status NOT IN ('trash', 'auto-draft')",
-            (int) get_option('default_product_cat', 0),
             HSY_IMPORTED_META,
             HSY_SHORT_AUTO_META
         ));

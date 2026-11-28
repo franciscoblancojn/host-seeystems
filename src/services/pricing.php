@@ -7,7 +7,7 @@
  * 1. Margen aprox. sobre PVP = round((1 − W / P) × 100)  (lo mismo que muestra el catálogo).
  * 2. Precio base = el mayor entre W × 2 y P.
  * 3. Categoría de descuento según el margen (ajuste discount_tiers): p. ej. 50–59 % → Ofertas 5 %,
- *    60–69 % → Ofertas 10 %, 70 % o más → Ofertas 15 %; menos → ninguna. Esas categorías las usa otro
+ *    60–64 % → Ofertas 10 %, 65–69 % → Ofertas 15 %, 70 % o más → Ofertas 20 %; menos → ninguna. Esas categorías las usa otro
  *    plugin para aplicar el descuento; este plugin solo las asigna (y quita las de otros tramos).
  * 4. Descuento total = global_discount (27 %) + % de su categoría (o encadenado, ajuste discount_combine).
  * 5. Utilidad mínima: si precio × (1 − descuento total) ≤ W × (1 + profit_margin), el precio sube lo
@@ -28,7 +28,8 @@ class HSY_PRICING
     const DEFAULT_TIERS = [
         ['min' => 50, 'slug' => 'ofertas-5', 'percent' => 5],
         ['min' => 60, 'slug' => 'ofertas-10', 'percent' => 10],
-        ['min' => 70, 'slug' => 'ofertas-15', 'percent' => 15],
+        ['min' => 65, 'slug' => 'ofertas-15', 'percent' => 15],
+        ['min' => 70, 'slug' => 'ofertas-20', 'percent' => 20],
     ];
 
     public static function margin($wholesale, $pvp)

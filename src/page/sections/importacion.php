@@ -225,7 +225,7 @@ $hsy_cat_tree = HSY_CATEGORIES::tree();
                     <?php endforeach; ?>
                 </tbody>
             </table>
-            <p class="description">Cada producto va al tramo de mayor «margen desde» que alcance; con menos margen que el primero, a ninguno. Por defecto: 50 % → Ofertas 5 %, 60 % → Ofertas 10 %, 70 % → Ofertas 15 % (49 % o menos, ninguna). Deja la categoría vacía para quitar un tramo; la última fila sirve para añadir uno.</p>
+            <p class="description">Cada producto va al tramo de mayor «margen desde» que alcance; con menos margen que el primero, a ninguno. Por defecto: 50 % → Ofertas 5 %, 60 % → Ofertas 10 %, 65 % → Ofertas 15 %, 70 % → Ofertas 20 % (49 % o menos, ninguna). Deja la categoría vacía para quitar un tramo; la última fila sirve para añadir uno.</p>
         </td>
     </tr>
     <?php if (HSY_PRICING::dpv_active()) : ?>

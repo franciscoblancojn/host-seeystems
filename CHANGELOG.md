@@ -4,6 +4,11 @@ Todos los cambios importantes del plugin Host Seeystems. Formato basado en [Keep
 
 > ✍️ Antes de publicar, agrega arriba una sección `## [Sin publicar]` con los cambios. `npm run push-v -- patch|minor|major` la renombra a `## [X.Y.Z] - fecha`, y no publica si esa sección no existe.
 
+## [Sin publicar]
+
+### 🔄 Cambiado
+- 🏷️ Tramos de descuento por defecto: 50 % → Ofertas 5 %, 60 % → Ofertas 10 %, **65 % → Ofertas 15 %**, **70 % → Ofertas 20 %** (`ofertas-20`). Solo afecta si no hay tramos guardados en el ajuste.
+
 ## [1.9.2] - 2026-11-28
 
 ### 🐛 Corregido

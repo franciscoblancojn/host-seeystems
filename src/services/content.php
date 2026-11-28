@@ -92,7 +92,49 @@ class HSY_CONTENT
         if (!HSY_STOCK::is_imported($product)) {
             return false;
         }
-        return '' === trim(wp_strip_all_tags($product->get_description())) || self::short_pending($product);
+        return '' === trim(wp_strip_all_tags($product->get_description())) || self::short_pending($product)
+            || self::foreign_description_pending($product) || self::foreign_short_pending($product);
+    }
+
+    /**
+     * ¿El producto ya existía en la tienda (no lo creó el plugin) y el ajuste update_foreign está activo?
+     * Esos productos se enlazaron por SKU y traen textos propios: se reescriben una vez con el plugin.
+     */
+    public static function is_foreign($product, $config = null)
+    {
+        $config = $config ?: (new HSY_USE_DATA_CONFIG())->get();
+        return !empty($config['update_foreign']) && 'no' === $product->get_meta(HSY_CREATED_META);
+    }
+
+    /** Producto que ya existía y cuya descripción todavía no escribió el plugin. */
+    public static function foreign_description_pending($product, $config = null)
+    {
+        return self::is_foreign($product, $config) && 'yes' !== $product->get_meta(HSY_DESC_DONE_META);
+    }
+
+    /** Producto que ya existía y cuya descripción corta todavía no escribió el plugin. */
+    public static function foreign_short_pending($product, $config = null)
+    {
+        return self::is_foreign($product, $config) && 'yes' !== $product->get_meta(HSY_SHORT_DONE_META);
+    }
+
+    /**
+     * Misma regla en SQL para los listados: condición (1/0) con las columnas de las metas ya unidas.
+     * $created, $done: alias de las columnas meta_value de HSY_CREATED_META y HSY_DESC_DONE_META / HSY_SHORT_DONE_META.
+     */
+    public static function foreign_sql($created, $done)
+    {
+        if (empty((new HSY_USE_DATA_CONFIG())->get()['update_foreign'])) {
+            return '0';
+        }
+        return "({$created} = 'no' AND COALESCE({$done}, '') <> 'yes')";
+    }
+
+    /** Misma regla con los valores en crudo de las metas. */
+    public static function foreign_pending_raw($created, $done, $config = null)
+    {
+        $config = $config ?: (new HSY_USE_DATA_CONFIG())->get();
+        return !empty($config['update_foreign']) && 'no' === (string) $created && 'yes' !== (string) $done;
     }
 
     /**
@@ -142,17 +184,24 @@ class HSY_CONTENT
         $in = implode(',', $product_ids);
         $rows = $wpdb->get_results($wpdb->prepare(
             "SELECT p.ID, p.post_status, p.post_content, p.post_excerpt, sa.meta_value AS short_auto, st.meta_value AS style,
-                    rp.meta_value AS regular_price
+                    rp.meta_value AS regular_price, cr.meta_value AS created, dd.meta_value AS desc_done, sd.meta_value AS short_done
              FROM {$wpdb->posts} p
              LEFT JOIN {$wpdb->postmeta} sa ON sa.post_id = p.ID AND sa.meta_key = %s
              LEFT JOIN {$wpdb->postmeta} st ON st.post_id = p.ID AND st.meta_key = %s
              LEFT JOIN {$wpdb->postmeta} rp ON rp.post_id = p.ID AND rp.meta_key = '_regular_price'
+             LEFT JOIN {$wpdb->postmeta} cr ON cr.post_id = p.ID AND cr.meta_key = %s
+             LEFT JOIN {$wpdb->postmeta} dd ON dd.post_id = p.ID AND dd.meta_key = %s
+             LEFT JOIN {$wpdb->postmeta} sd ON sd.post_id = p.ID AND sd.meta_key = %s
              WHERE p.ID IN ($in)", // $in son enteros (intval)
             HSY_SHORT_AUTO_META,
-            HSY_STYLE_META
+            HSY_STYLE_META,
+            HSY_CREATED_META,
+            HSY_DESC_DONE_META,
+            HSY_SHORT_DONE_META
         ));
         $categories = HSY_CATEGORIES::names_for($product_ids);
-        $style_on = !empty((new HSY_USE_DATA_CONFIG())->get()['ai_style']);
+        $config = (new HSY_USE_DATA_CONFIG())->get();
+        $style_on = !empty($config['ai_style']);
         $out = [];
         foreach ($rows as $row) {
             $description = self::text($row->post_content);
@@ -161,8 +210,10 @@ class HSY_CONTENT
                 'store_price' => '' === (string) $row->regular_price ? null : (float) $row->regular_price,
                 'description' => mb_substr($description, 0, self::TEXT_MAX),
                 'short_description' => mb_substr(self::text($row->post_excerpt), 0, self::TEXT_MAX),
-                'description_pending' => '' === $description,
-                'short_pending' => self::short_pending_raw($row->post_excerpt, $row->short_auto),
+                'description_pending' => '' === $description || self::foreign_pending_raw($row->created, $row->desc_done, $config),
+                'short_pending' => self::short_pending_raw($row->post_excerpt, $row->short_auto)
+                    || self::foreign_pending_raw($row->created, $row->short_done, $config),
+                'foreign' => !empty($config['update_foreign']) && 'no' === (string) $row->created,
                 'categories' => $categories[(int) $row->ID]['names'] ?? [],
                 'has_categories' => $categories[(int) $row->ID]['has'] ?? false,
                 'style_pending' => $style_on && 'pending' === $row->style,
@@ -186,14 +237,17 @@ class HSY_CONTENT
         // El estilo solo cuenta como pendiente si la IA lo clasifica (ajuste ai_style).
         $style = !empty((new HSY_USE_DATA_CONFIG())->get()['ai_style']) ? 'pending' : '__off__';
         $ignored = HSY_CATEGORIES::ignored_sql(); // enteros: categoría por defecto y de ofertas
+        // Productos que ya existían: su descripción / corta cuentan como faltantes hasta que las escriba el plugin.
+        $foreign_desc = self::foreign_sql('cr.meta_value', 'dd.meta_value');
+        $foreign_short = self::foreign_sql('cr.meta_value', 'sd.meta_value');
         // Qué le falta a cada producto (1/0) y orden: primero los que tienen menos faltantes de las tres
         // (descripción, corta, categorías; los que solo esperan el estilo tienen 0) y, a igualdad, por ID.
         return array_map('intval', $wpdb->get_col($wpdb->prepare(
             "SELECT x.ID FROM (
                 SELECT p.ID,
-                    IF(TRIM(p.post_content) = '', 1, 0) AS no_description,
+                    IF(TRIM(p.post_content) = '' OR {$foreign_desc}, 1, 0) AS no_description,
                     IF(TRIM(p.post_excerpt) = '' OR sa.meta_value = 'yes'
-                       OR (sa.meta_value IS NULL AND p.post_excerpt LIKE '<ul><li><strong>%%'), 1, 0) AS no_short,
+                       OR (sa.meta_value IS NULL AND p.post_excerpt LIKE '<ul><li><strong>%%') OR {$foreign_short}, 1, 0) AS no_short,
                     IF(NOT EXISTS (
                         SELECT 1 FROM {$wpdb->term_relationships} tr
                         INNER JOIN {$wpdb->term_taxonomy} tt ON tt.term_taxonomy_id = tr.term_taxonomy_id
@@ -203,6 +257,9 @@ class HSY_CONTENT
                 INNER JOIN {$wpdb->postmeta} imp ON imp.post_id = p.ID AND imp.meta_key = %s AND imp.meta_value = 'yes'
                 LEFT JOIN {$wpdb->postmeta} sa ON sa.post_id = p.ID AND sa.meta_key = %s
                 LEFT JOIN {$wpdb->postmeta} st ON st.post_id = p.ID AND st.meta_key = %s
+                LEFT JOIN {$wpdb->postmeta} cr ON cr.post_id = p.ID AND cr.meta_key = %s
+                LEFT JOIN {$wpdb->postmeta} dd ON dd.post_id = p.ID AND dd.meta_key = %s
+                LEFT JOIN {$wpdb->postmeta} sd ON sd.post_id = p.ID AND sd.meta_key = %s
                 WHERE p.post_type = 'product' AND p.post_status <> 'trash'
              ) x
              WHERE x.no_description + x.no_short + x.no_categories + x.no_style > 0
@@ -212,6 +269,9 @@ class HSY_CONTENT
             HSY_IMPORTED_META,
             HSY_SHORT_AUTO_META,
             HSY_STYLE_META,
+            HSY_CREATED_META,
+            HSY_DESC_DONE_META,
+            HSY_SHORT_DONE_META,
             $limit
         )));
     }
@@ -330,6 +390,12 @@ SALIDA (texto plano, una sola línea, sin formato):";
                 $pre_warnings[] = 'Sin categoría: su género no tiene regla en Importación → Categorías.';
             }
         }
+        // Producto que ya existía: también se le elige el estilo si nunca se clasificó.
+        $foreign_desc = self::foreign_description_pending($product, $config);
+        $foreign_short = self::foreign_short_pending($product, $config);
+        if (($foreign_desc || $foreign_short) && '' === (string) $product->get_meta(HSY_STYLE_META)) {
+            $product->update_meta_data(HSY_STYLE_META, HSY_CATEGORIES::style_options($product) ? 'pending' : 'none');
+        }
         $need_style = self::style_pending($product, $config) && self::ai_enabled($config);
         if (!$force && !self::is_pending($product) && !$need_style) {
             if ($done) {
@@ -345,8 +411,9 @@ SALIDA (texto plano, una sola línea, sin formato):";
         }
 
         // $force (Regenerar): reescribe las dos descripciones aunque ya existan (también las editadas a mano).
-        $need_description = $force || '' === trim(wp_strip_all_tags($product->get_description()));
-        $need_short = $force || self::short_pending($product);
+        // Los productos que ya existían (ajuste update_foreign) se reescriben aunque tengan textos.
+        $need_description = $force || $foreign_desc || '' === trim(wp_strip_all_tags($product->get_description()));
+        $need_short = $force || $foreign_short || self::short_pending($product);
         $web = self::web($product, $config);
         $warnings = array_merge($pre_warnings, $web['warnings']);
         $web = $web['web'];
@@ -362,11 +429,13 @@ SALIDA (texto plano, una sola línea, sin formato):";
             }
             if ($need_description && '' !== $generated['description']) {
                 $product->set_description($generated['description']);
+                $product->update_meta_data(HSY_DESC_DONE_META, 'yes');
                 $fields[] = 'description';
             }
             if ($need_short && '' !== $generated['short_description']) {
                 $product->set_short_description($generated['short_description']);
                 $product->update_meta_data(HSY_SHORT_AUTO_META, 'no');
+                $product->update_meta_data(HSY_SHORT_DONE_META, 'yes');
                 $fields[] = 'short_description';
             }
             $warnings = array_merge($warnings, $generated['warnings']);
@@ -374,10 +443,13 @@ SALIDA (texto plano, una sola línea, sin formato):";
                 $source = 'ia:' . implode(',', $generated['connections']);
                 $product->update_meta_data('_hsy_content_ai', implode(',', $generated['connections']));
             }
-        } elseif ($web && $need_description) {
+        } elseif ($web && $need_description && '' === trim(wp_strip_all_tags($product->get_description()))) {
+            // Solo Google (sin IA): rellena una descripción vacía; no reemplaza la de un producto que ya existía.
             $product->set_description(wpautop(esc_html($web['text'])));
             $fields[] = 'description';
             $source = 'google';
+        } elseif ($foreign_desc || $foreign_short) {
+            $warnings[] = 'Producto que ya existía: sus textos se reescriben solo con la IA activa.';
         }
 
         // Estilo (subcategorías) elegido por la IA entre las opciones del producto.

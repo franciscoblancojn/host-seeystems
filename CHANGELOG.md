@@ -4,7 +4,12 @@ Todos los cambios importantes del plugin Host Seeystems. Formato basado en [Keep
 
 > ✍️ Antes de publicar, agrega arriba una sección `## [Sin publicar]` con los cambios. `npm run push-v -- patch|minor|major` la renombra a `## [X.Y.Z] - fecha`, y no publica si esa sección no existe.
 
-## [Sin publicar]
+## [1.10.0] - 2026-11-28
+
+### ✨ Añadido
+- Ajuste **«Actualizar datos de productos no creados por el plugin»** (Importación → Descripciones), activado por defecto. Los productos que ya estaban en la tienda y se enlazaron con el catálogo por su SKU (meta `_hsy_created = no`) cuentan como «Sin contenido» aunque tengan textos: la IA («Generar descripciones y categorías faltantes» o al importar) reescribe **una vez** su descripción y su descripción corta, y les elige el estilo si nunca se clasificó. Las categorías que ya tienen no se tocan.
+- Esos productos salen también en el CSV de contenido («solo faltantes») y la importación del CSV escribe sus textos aunque ya tengan. Después de escribirlos el plugin (metas `_hsy_desc_done` / `_hsy_short_done`), se tratan como los demás.
+- Migración automática al cargar wp-admin: marca como «ya existente» cada producto importado cuya fecha de creación es más de 7 días anterior a su importación.
 
 ### 🔄 Cambiado
 - 🏷️ Tramos de descuento por defecto: 50 % → Ofertas 5 %, 60 % → Ofertas 10 %, **65 % → Ofertas 15 %**, **70 % → Ofertas 20 %** (`ofertas-20`). Solo afecta si no hay tramos guardados en el ajuste.

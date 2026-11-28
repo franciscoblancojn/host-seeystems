@@ -5,3 +5,4 @@ require_once HSY_DIR . 'src/hooks/stock.php';
 require_once HSY_DIR . 'src/hooks/editor.php';
 require_once HSY_DIR . 'src/hooks/redirect.php';
 require_once HSY_DIR . 'src/hooks/shipping.php';
+require_once HSY_DIR . 'src/hooks/migrate.php';

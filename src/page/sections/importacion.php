@@ -300,9 +300,16 @@ $hsy_preview_products = get_posts([
         <td>
             <ul class="hsy-help">
                 <li>Productos importados <strong>sin descripción</strong>, o cuya <strong>descripción corta</strong> sigue siendo la lista automática de características.</li>
-                <li>Lo escrito a mano o generado antes <strong>nunca se reemplaza</strong>.</li>
+                <li>Lo escrito a mano o generado antes <strong>nunca se reemplaza</strong> (salvo en los productos que ya existían, con la opción de abajo).</li>
                 <li>Se genera al importar si está marcada la casilla «Generar contenido al importar» de la pestaña Productos (activada por defecto), o después con «Generar descripciones y categorías faltantes», de a un producto.</li>
             </ul>
+        </td>
+    </tr>
+    <tr>
+        <th scope="row">Productos no creados por el plugin</th>
+        <td>
+            <label><input type="checkbox" name="hsy[update_foreign]" value="1" <?php checked($config['update_foreign'], 1); ?>> Actualizar datos de productos no creados por el plugin</label>
+            <p class="description">Productos que ya estaban en la tienda y el plugin enlazó con el catálogo por su SKU (meta <code><?= esc_html(HSY_CREATED_META) ?> = no</code>). Activado: su descripción, su descripción corta y su estilo se reescriben <strong>una vez</strong> con la IA o con el CSV, aunque ya tengan textos; hasta entonces cuentan como «Sin contenido». Después se tratan como los demás (no se vuelven a reescribir). Las categorías que ya tienen no se tocan. Desactivado: se conservan sus textos.</p>
         </td>
     </tr>
     <tr>

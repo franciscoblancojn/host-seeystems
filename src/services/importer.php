@@ -124,6 +124,12 @@ class HSY_IMPORTER
         }
 
         // Siempre: marca de importado, precio mayorista y datos del origen.
+        // Creado por el plugin o ya existente (enlazado por SKU): se decide la primera vez y no cambia.
+        if ($is_new) {
+            $product->update_meta_data(HSY_CREATED_META, 'yes');
+        } elseif ('' === (string) $product->get_meta(HSY_CREATED_META)) {
+            $product->update_meta_data(HSY_CREATED_META, 'yes' === $product->get_meta(HSY_IMPORTED_META) ? 'yes' : 'no');
+        }
         $product->update_meta_data(HSY_IMPORTED_META, 'yes');
         $product->update_meta_data(HSY_SOURCE_META, $item['id']);
         $product->update_meta_data('_hsy_source_name', $item['name']);

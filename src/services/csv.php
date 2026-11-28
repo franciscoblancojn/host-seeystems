@@ -86,19 +86,40 @@ class HSY_CSV
     public static function missing($product)
     {
         $missing = [];
-        if ('' === trim(wp_strip_all_tags($product->get_description()))) {
+        // Un producto que ya existía (ajuste update_foreign) pide sus textos aunque tenga, hasta que los escriba el plugin.
+        if (self::description_missing($product)) {
             $missing[] = 'descripcion';
         }
-        if (HSY_CONTENT::short_pending($product)) {
+        if (self::short_missing($product)) {
             $missing[] = 'descripcion_corta';
         }
         if (!HSY_CATEGORIES::has_categories($product)) {
             $missing[] = 'categorias';
         }
-        if ('pending' === $product->get_meta(HSY_STYLE_META)) {
+        if (self::style_missing($product)) {
             $missing[] = 'estilo';
         }
         return $missing;
+    }
+
+    private static function description_missing($product)
+    {
+        return '' === trim(wp_strip_all_tags($product->get_description())) || HSY_CONTENT::foreign_description_pending($product);
+    }
+
+    /** Estilo pendiente; en un producto que ya existía y nunca se clasificó, también (si tiene opciones). */
+    private static function style_missing($product)
+    {
+        $style = (string) $product->get_meta(HSY_STYLE_META);
+        if ('pending' === $style) {
+            return true;
+        }
+        return '' === $style && HSY_CONTENT::is_foreign($product) && (bool) HSY_CATEGORIES::style_options($product);
+    }
+
+    private static function short_missing($product)
+    {
+        return HSY_CONTENT::short_pending($product) || HSY_CONTENT::foreign_short_pending($product);
     }
 
     /**
@@ -216,13 +237,13 @@ class HSY_CSV
         $has_short = '' !== trim((string) ($row['descripcion_corta'] ?? ''));
         $has_style = '' !== trim((string) ($row['estilo'] ?? ''));
         $fields = [];
-        if ($has_description && ('replace' === $mode || '' === trim(wp_strip_all_tags($product->get_description())))) {
+        if ($has_description && ('replace' === $mode || self::description_missing($product))) {
             $fields[] = 'description';
         }
-        if ($has_short && ('replace' === $mode || HSY_CONTENT::short_pending($product))) {
+        if ($has_short && ('replace' === $mode || self::short_missing($product))) {
             $fields[] = 'short_description';
         }
-        if ($has_style && ('replace' === $mode || 'pending' === $product->get_meta(HSY_STYLE_META))) {
+        if ($has_style && ('replace' === $mode || self::style_missing($product))) {
             if (!HSY_CATEGORIES::style_options($product)) {
                 return array_merge($base, ['action' => 'error', 'message' => 'El producto no tiene subcategorías de estilo para elegir (revisa sus categorías).']);
             }
@@ -258,7 +279,7 @@ class HSY_CSV
         $texts = $item['texts'];
         $written = [];
         if (in_array('description', $item['fields'], true)
-            && ('replace' === $mode || '' === trim(wp_strip_all_tags($product->get_description())))) {
+            && ('replace' === $mode || self::description_missing($product))) {
             if ('' !== trim($texts['intro'])) {
                 $benefits = preg_split('/\s*\|\|\s*|\r\n|\r|\n/u', $texts['beneficios']);
                 $parts = HSY_LAYOUT::parse(wp_json_encode([
@@ -272,20 +293,22 @@ class HSY_CSV
             }
             if ('' !== trim(wp_strip_all_tags($html))) {
                 $product->set_description($html);
+                $product->update_meta_data(HSY_DESC_DONE_META, 'yes');
                 $written[] = 'description';
             }
         }
         if (in_array('short_description', $item['fields'], true)
-            && ('replace' === $mode || HSY_CONTENT::short_pending($product))) {
+            && ('replace' === $mode || self::short_missing($product))) {
             $short = HSY_CONTENT::clean_html($texts['descripcion_corta']);
             if ('' !== trim(wp_strip_all_tags($short))) {
                 $product->set_short_description($short);
                 $product->update_meta_data(HSY_SHORT_AUTO_META, 'no');
+                $product->update_meta_data(HSY_SHORT_DONE_META, 'yes');
                 $written[] = 'short_description';
             }
         }
         if (in_array('style', $item['fields'], true)
-            && ('replace' === $mode || 'pending' === $product->get_meta(HSY_STYLE_META))) {
+            && ('replace' === $mode || self::style_missing($product))) {
             // Estilo: nombres de subcategoría separados por coma («Análogo, Elegante»), entre las opciones del producto.
             if ('replace' === $mode) {
                 // Quitar los estilos anteriores (hijos de las categorías más profundas) antes de poner los nuevos.

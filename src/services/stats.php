@@ -21,24 +21,35 @@ class HSY_STATS
         $ignored = HSY_CATEGORIES::ignored_sql(); // enteros: categoría por defecto y de ofertas
         $rows = $wpdb->get_results($wpdb->prepare(
             "SELECT p.ID, p.post_status, TRIM(p.post_content) = '' AS no_description, p.post_excerpt, sa.meta_value AS short_auto,
+                    cr.meta_value AS created, dd.meta_value AS desc_done, sd.meta_value AS short_done,
                     (SELECT COUNT(*) FROM {$wpdb->term_relationships} tr
                      INNER JOIN {$wpdb->term_taxonomy} tt ON tt.term_taxonomy_id = tr.term_taxonomy_id
                      WHERE tr.object_id = p.ID AND tt.taxonomy = 'product_cat' AND tt.term_id NOT IN ({$ignored})) AS categories
              FROM {$wpdb->posts} p
              INNER JOIN {$wpdb->postmeta} imp ON imp.post_id = p.ID AND imp.meta_key = %s AND imp.meta_value = 'yes'
              LEFT JOIN {$wpdb->postmeta} sa ON sa.post_id = p.ID AND sa.meta_key = %s
+             LEFT JOIN {$wpdb->postmeta} cr ON cr.post_id = p.ID AND cr.meta_key = %s
+             LEFT JOIN {$wpdb->postmeta} dd ON dd.post_id = p.ID AND dd.meta_key = %s
+             LEFT JOIN {$wpdb->postmeta} sd ON sd.post_id = p.ID AND sd.meta_key = %s
              WHERE p.post_type = 'product' AND p.post_status NOT IN ('trash', 'auto-draft')",
             HSY_IMPORTED_META,
-            HSY_SHORT_AUTO_META
+            HSY_SHORT_AUTO_META,
+            HSY_CREATED_META,
+            HSY_DESC_DONE_META,
+            HSY_SHORT_DONE_META
         ));
+        $config = (new HSY_USE_DATA_CONFIG())->get();
         $out = [];
         foreach ($rows as $row) {
-            // Contenido completo = descripción + descripción corta + categorías (el estilo no cuenta).
+            // Contenido completo = descripción + descripción corta + categorías (el estilo no cuenta). Un producto
+            // que ya existía (ajuste update_foreign) necesita además que el plugin haya escrito sus textos.
             $out[(int) $row->ID] = [
                 'status' => $row->post_status,
                 'pending' => (bool) $row->no_description
                     || HSY_CONTENT::short_pending_raw($row->post_excerpt, $row->short_auto)
-                    || 0 === (int) $row->categories,
+                    || 0 === (int) $row->categories
+                    || HSY_CONTENT::foreign_pending_raw($row->created, $row->desc_done, $config)
+                    || HSY_CONTENT::foreign_pending_raw($row->created, $row->short_done, $config),
             ];
         }
         return $out;

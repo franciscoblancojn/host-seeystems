@@ -36,6 +36,9 @@ class HSY_USE_DATA_CONFIG extends HSY_USE_DATA_BASE
         'global_discount' => 27,    // descuento que otro plugin aplica a todos, en %
         'discount_combine' => 'sum', // sum: 27 % + 5 % = 32 %  ·  chain: 1 − 0,73 × 0,95
         'price_round' => 100,       // redondeo hacia arriba cuando el precio se ajusta por utilidad mínima
+        // Productos que ya existían en la tienda (enlazados por SKU): su descripción, corta y estilo cuentan como
+        // pendientes hasta que el plugin los escriba (IA o CSV), aunque ya tengan textos (HSY_CONTENT::foreign_*).
+        'update_foreign' => 1,
         'reactivate_discounts' => 1, // al importar o actualizar, aplicar los descuentos automáticos de «Descuentos por Volumen» (quita _dpv_manual)
         // Envío por defecto (en las unidades de la tienda): solo se rellenan los datos vacíos (HSY_HOOK_SHIPPING).
         'default_length' => 20,
@@ -172,6 +175,7 @@ class HSY_USE_DATA_CONFIG extends HSY_USE_DATA_BASE
             $out['jewelry_words'] = sanitize_text_field($input['jewelry_words'] ?? '');
             $out['jewelry_category'] = sanitize_text_field($input['jewelry_category'] ?? '') ?: self::DEFAULTS['jewelry_category'];
             $out['ai_style'] = empty($input['ai_style']) ? 0 : 1;
+            $out['update_foreign'] = empty($input['update_foreign']) ? 0 : 1;
             $out['ai_prompt_style'] = self::prompt($input['ai_prompt_style'] ?? '', HSY_CONTENT::DEFAULT_PROMPT_STYLE);
             $out['name_template'] = false !== strpos($template, '{nombre}') ? $template : self::DEFAULTS['name_template'];
             $out['type_watch'] = sanitize_text_field($input['type_watch'] ?? self::DEFAULTS['type_watch']);

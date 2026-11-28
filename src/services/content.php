@@ -141,7 +141,7 @@ class HSY_CONTENT
         }
         $in = implode(',', $product_ids);
         $rows = $wpdb->get_results($wpdb->prepare(
-            "SELECT p.ID, p.post_content, p.post_excerpt, sa.meta_value AS short_auto, st.meta_value AS style
+            "SELECT p.ID, p.post_status, p.post_content, p.post_excerpt, sa.meta_value AS short_auto, st.meta_value AS style
              FROM {$wpdb->posts} p
              LEFT JOIN {$wpdb->postmeta} sa ON sa.post_id = p.ID AND sa.meta_key = %s
              LEFT JOIN {$wpdb->postmeta} st ON st.post_id = p.ID AND st.meta_key = %s
@@ -155,6 +155,7 @@ class HSY_CONTENT
         foreach ($rows as $row) {
             $description = self::text($row->post_content);
             $out[(int) $row->ID] = [
+                'status' => $row->post_status,
                 'description' => mb_substr($description, 0, self::TEXT_MAX),
                 'short_description' => mb_substr(self::text($row->post_excerpt), 0, self::TEXT_MAX),
                 'description_pending' => '' === $description,

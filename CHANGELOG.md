@@ -4,6 +4,14 @@ Todos los cambios importantes del plugin Host Seeystems. Formato basado en [Keep
 
 > ✍️ Antes de publicar, agrega arriba una sección `## [Sin publicar]` con los cambios. `npm run push-v -- patch|minor|major` la renombra a `## [X.Y.Z] - fecha`, y no publica si esa sección no existe.
 
+## [1.8.0] - 2026-11-27
+
+### ✨ Añadido
+- 🏷️ **Filtro por marca** en la tabla de productos (con la cantidad de cada una), combinable con el buscador y el filtro de estado.
+- 🚀 Botón **«Publicar filtrados con contenido (N)»** junto a los filtros: publica todos los productos del filtro actual (todas las páginas) que están en borrador y tienen contenido completo; por ejemplo, marca «Guess» → publicar sus borradores listos. Con confirmación, por lotes, y cada producto se vuelve a comprobar antes de publicarse.
+- 🔎 Filtros «Listos para publicar (borrador con contenido)» y «Publicados».
+- La columna Estado muestra si el producto importado está en **Borrador** o **Publicado**.
+
 ## [1.7.1] - 2026-11-27
 
 ### ✨ Añadido

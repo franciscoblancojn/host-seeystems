@@ -76,7 +76,14 @@ $catalog = new HSY_USE_DATA_CATALOG();
             <option value="new">Sin importar</option>
             <option value="imported">Ya importados</option>
             <option value="incomplete">Con contenido faltante</option>
+            <option value="ready">Listos para publicar (borrador con contenido)</option>
+            <option value="published">Publicados</option>
         </select>
+        <select id="hsy-brand">
+            <option value="">Todas las marcas</option>
+        </select>
+        <button type="button" class="button button-primary" id="hsy-publish-filtered" disabled
+            title="Publica todos los productos del filtro actual (todas las páginas) que están en borrador y tienen contenido completo">Publicar filtrados con contenido (<span id="hsy-publish-filtered-count">0</span>)</button>
         <label class="hsy-auto-content" title="Activada: al importar, la IA genera descripciones, estilo y lo que falte en paralelo. Desactivada: solo importa y los productos quedan «Pendiente de generar con IA».">
             <input type="checkbox" id="hsy-auto-content" checked> Generar contenido al importar
         </label>

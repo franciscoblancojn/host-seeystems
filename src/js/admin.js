@@ -51,7 +51,7 @@ jQuery(function ($) {
 
     function hsy_busy(value) {
         busy = value;
-        $page.find('#hsy-load, #hsy-import-selected, #hsy-import-all, .hsy-import-one, .hsy-regenerate-one, #hsy-regenerate-selected, #hsy-content-pending, #hsy-publish').prop('disabled', value);
+        $page.find('#hsy-load, #hsy-import-selected, #hsy-import-all, .hsy-import-one, .hsy-regenerate-one, #hsy-regenerate-selected, #hsy-content-pending, #hsy-publish, #hsy-publish-filtered').prop('disabled', value);
         $('#hsy-spinner').toggleClass('is-active', value);
         if (!value) {
             hsy_update_count();
@@ -79,7 +79,9 @@ jQuery(function ($) {
 
     function hsy_status(row) {
         if (row.product_id) {
-            return '<a href="' + hsy_text(row.edit) + '" target="_blank">Importado #' + row.product_id + '</a>';
+            var st = row.status === 'publish' ? '<span class="hsy-badge hsy-badge--published">Publicado</span>'
+                : (row.status === 'draft' ? '<span class="hsy-badge hsy-badge--draft">Borrador</span>' : '');
+            return '<a href="' + hsy_text(row.edit) + '" target="_blank">Importado #' + row.product_id + '</a>' + (st ? '<br>' + st : '');
         }
         return '<span class="hsy-muted">Sin importar</span>';
     }
@@ -154,10 +156,26 @@ jQuery(function ($) {
             '</tr>';
     }
 
+    // Producto importado en borrador con contenido completo (descripción, corta y categorías): se puede publicar.
+    function hsy_publishable(row) {
+        return !!row.product_id && row.status === 'draft' &&
+            !row.description_pending && !row.short_pending && !!row.has_categories;
+    }
+
     function hsy_visible() {
         var q = $.trim($('#hsy-search').val() || '').toLowerCase();
         var filter = $('#hsy-filter').val();
+        var brand = $('#hsy-brand').val() || '';
         return $.grep(rows, function (row) {
+            if (brand && row.brand !== brand) {
+                return false;
+            }
+            if (filter === 'ready' && !hsy_publishable(row)) {
+                return false;
+            }
+            if (filter === 'published' && !(row.product_id && row.status === 'publish')) {
+                return false;
+            }
             if (filter === 'new' && row.product_id) {
                 return false;
             }
@@ -220,6 +238,9 @@ jQuery(function ($) {
             this.checked = !!selected[this.value];
         });
         $('#hsy-total').text(info.all.length);
+        var publishable = $.grep(info.all, hsy_publishable).length;
+        $('#hsy-publish-filtered-count').text(publishable);
+        $('#hsy-publish-filtered').prop('disabled', busy || !publishable);
         $('#hsy-page-count').text(info.list.length);
         $page.find('.hsy-pager').html(hsy_pager_html(info)).prop('hidden', !info.all.length);
         $page.find('.hsy-actions, .hsy-table').prop('hidden', !rows.length);
@@ -277,8 +298,35 @@ jQuery(function ($) {
         return out;
     }
 
+    // Desplegable de marcas con su cantidad (se conserva la elegida al refrescar).
+    function hsy_fill_brands() {
+        var $sel = $('#hsy-brand');
+        var current = $sel.val() || '';
+        var counts = {};
+        for (var i = 0; i < rows.length; i++) {
+            if (rows[i].brand) {
+                counts[rows[i].brand] = (counts[rows[i].brand] || 0) + 1;
+            }
+        }
+        var names = [];
+        for (var name in counts) {
+            if (Object.prototype.hasOwnProperty.call(counts, name)) {
+                names.push(name);
+            }
+        }
+        names.sort(function (a, b) {
+            return a.localeCompare(b);
+        });
+        var html = '<option value="">Todas las marcas</option>';
+        for (var j = 0; j < names.length; j++) {
+            html += '<option value="' + hsy_text(names[j]) + '">' + hsy_text(names[j]) + ' (' + counts[names[j]] + ')</option>';
+        }
+        $sel.html(html).val(counts[current] ? current : '');
+    }
+
     function hsy_set_rows(data) {
         rows = data.rows || [];
+        hsy_fill_brands();
         $('#hsy-fetched').text(data.fetched_at ? 'Última lectura: ' + data.fetched_at : '');
         hsy_set_pending(data.pending);
         hsy_set_stats(data.stats);
@@ -317,9 +365,57 @@ jQuery(function ($) {
         currentPage = 1;
         hsy_render();
     });
-    $page.on('change', '#hsy-filter', function () {
+    $page.on('change', '#hsy-filter, #hsy-brand', function () {
         currentPage = 1;
         hsy_render();
+    });
+
+    // Publicar todos los del filtro actual (todas las páginas) en borrador y con contenido completo.
+    $page.on('click', '#hsy-publish-filtered', function () {
+        if (busy) {
+            return;
+        }
+        var ids = $.map($.grep(hsy_visible(), hsy_publishable), function (row) {
+            return row.product_id;
+        });
+        var brand = $('#hsy-brand').val();
+        if (!ids.length || !window.confirm('¿Publicar ' + ids.length + ' productos' + (brand ? ' de ' + brand : '') +
+            '? Pasan de borrador a publicados y se verán en la tienda.')) {
+            return;
+        }
+        var total = ids.length;
+        var count = 0;
+        var errors = 0;
+        var last = '';
+        hsy_busy(true);
+        hsy_progress(0, total, '#hsy-progress', 'Publicando');
+        $('#hsy-progress-ai').prop('hidden', true);
+        function next() {
+            if (!ids.length) {
+                hsy_busy(false);
+                hsy_message('#hsy-message', 'Publicados: ' + (total - errors) + (brand ? ' de ' + brand : '') +
+                    (errors ? ', ' + errors + ' sin publicar (' + last + ').' : '.'), errors ? 'error' : 'ok');
+                hsy_refresh_pending();
+                return;
+            }
+            var batch = ids.splice(0, 20);
+            hsy_post('publish', { ids: batch }).then(function (results) {
+                for (var i = 0; i < results.length; i++) {
+                    if (!results[i].ok) {
+                        errors++;
+                        last = results[i].message;
+                    }
+                }
+            }, function (error) {
+                errors += batch.length;
+                last = error;
+            }).always(function () {
+                count += batch.length;
+                hsy_progress(count, total, '#hsy-progress', 'Publicando');
+                next();
+            });
+        }
+        next();
     });
 
     $page.on('click', '#hsy-load', function () {
